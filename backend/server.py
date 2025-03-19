@@ -6,16 +6,8 @@ import base64
 from io import BytesIO
 from PIL import Image
 import os
-import logging
 
-# Setup minimal logging for errors only
-logging.basicConfig(
-    level=logging.ERROR,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger('edge-detection-server')
-
-# Create Socket.io server with logging disabled
+# Create Socket.io server with logging completely disabled
 sio = socketio.Server(
     cors_allowed_origins='*',
     logger=False,
@@ -93,14 +85,11 @@ def process_frame(sid, data):
                 
                 sio.emit('processed_frame', response, to=sid)
             except Exception as e:
-                logger.error(f"Error processing image: {e}")
-                sio.emit('error', {'message': f"Error processing image: {e}"}, to=sid)
+                sio.emit('error', {'message': f"Error processing image: {str(e)}"}, to=sid)
                 return
         else:
-            logger.error(f"Invalid data format received")
             sio.emit('error', {'message': "Invalid data format: expected 'frame' in JSON object"}, to=sid)
     except Exception as e:
-        logger.error(f"Error in process_frame: {e}")
         sio.emit('error', {'message': str(e)}, to=sid)
 
 @sio.event
@@ -110,4 +99,4 @@ def disconnect(sid):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
     print(f"Starting edge detection server on port {port}")
-    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', port)), app) 
+    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', port)), app, log_output=False) 
