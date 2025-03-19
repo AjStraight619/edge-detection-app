@@ -1,5 +1,15 @@
 # Edge Detection App
 
+A real-time edge detection application that highlights detailed contours in video input using advanced computer vision algorithms.
+
+## Screenshots
+
+### Focus Peaking Disabled
+![Focus Peaking Disabled](screenshots/without-peaking.png)
+
+### Focus Peaking Enabled
+![Focus Peaking Enabled](screenshots/with-peaking.png)
+
 ## Features
 
 - **Real-time Edge Detection**: Processes video frames to identify and highlight edges and contours
@@ -97,7 +107,7 @@ npm run dev
 ## Troubleshooting
 
 - **Permission errors**: Run `chmod +x start-app.sh backend/setup.sh backend/start.sh` to make scripts executable
-- **Port 5001 in use**: Kill the process using port 5001 or change the port in backend/server.py
+- **Port 8000 in use**: Kill the process using port 8000 or change the port in backend/server.py
 - **Dependency issues**: Run `cd backend && ./setup.sh` to reinstall dependencies
 - **Windows users**: You may need to install Git Bash or WSL to run the bash scripts
 
