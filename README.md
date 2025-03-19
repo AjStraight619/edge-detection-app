@@ -99,8 +99,6 @@ npm run dev
 - **Permission errors**: Run `chmod +x start-app.sh backend/setup.sh backend/start.sh` to make scripts executable
 - **Port 5001 in use**: Kill the process using port 5001 or change the port in backend/server.py
 - **Dependency issues**: Run `cd backend && ./setup.sh` to reinstall dependencies
-- **OpenCV installation problems**: You may need additional system libraries. See the [OpenCV documentation](https://docs.opencv.org/master/df/d65/tutorial_table_of_content_introduction.html) for your OS.
-- **Video playback issues**: Make sure your video file is in a compatible format (MP4 recommended)
 - **Windows users**: You may need to install Git Bash or WSL to run the bash scripts
 
 ## Development
@@ -108,6 +106,3 @@ npm run dev
 - The backend auto-detects changes to the Python code
 - The frontend uses Vite's hot module replacement for fast development
 
-## License
-
-[MIT License](LICENSE) 
