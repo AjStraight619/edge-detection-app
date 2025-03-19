@@ -22,6 +22,23 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
+# Function to clean up backend processes
+cleanup() {
+    echo "Shutting down backend..."
+    # Kill the backend process
+    if [ -n "$BACKEND_PID" ]; then
+        kill $BACKEND_PID 2>/dev/null || true
+    fi
+    
+    # Extra safety - kill any remaining Python server processes
+    pkill -f "python server.py" 2>/dev/null || true
+    
+    exit 0
+}
+
+# Set up signal handling
+trap cleanup INT TERM EXIT
+
 # Check if backend is already set up
 if [ ! -d "backend/venv" ]; then
     echo "Setting up backend..."
@@ -44,6 +61,3 @@ fi
 
 echo "Starting frontend..."
 (cd frontend && npm run dev)
-
-# When the frontend is terminated, kill the backend too
-trap "echo 'Shutting down backend...' && kill $BACKEND_PID" EXIT

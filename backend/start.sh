@@ -22,4 +22,5 @@ fi
 
 # Start the server
 echo "Server starting on port 8000..."
-python server.py 
+# Using exec replaces the shell process, allowing signals to be properly caught
+exec python server.py 
