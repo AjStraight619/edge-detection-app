@@ -10,7 +10,7 @@ import logging
 
 # Setup minimal logging for errors only
 logging.basicConfig(
-    level=logging.ERROR,  # Changed from INFO to ERROR
+    level=logging.ERROR,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger('edge-detection-server')
@@ -25,129 +25,7 @@ app = socketio.WSGIApp(sio)
 
 @sio.event
 def connect(sid, environ):
-    pass  # Removed logging
-
-@sio.event
-def test_event(sid, data):
-    sio.emit('test_response', 'Hello from server', to=sid)
-
-@sio.event
-def generate_test_image(sid):
-    """Create and process a test image with patterns that should show edge detection"""
-    try:
-        debug_dir = 'debug_frames'
-        
-        if not os.path.exists(debug_dir):
-            try:
-                os.makedirs(debug_dir)
-            except Exception as e:
-                # Try creating in current working directory
-                try:
-                    cwd = os.getcwd()
-                    full_path = os.path.join(cwd, debug_dir)
-                    os.makedirs(full_path)
-                    debug_dir = full_path
-                except Exception as e2:
-                    logger.error(f"Failed to create debug directory: {e2}")
-                    sio.emit('error', {'message': f"Could not create debug directory: {str(e2)}"}, to=sid)
-                    return False
-            
-        # Create a test image with patterns that should trigger edge detection
-        width, height = 640, 480
-        test_img = np.zeros((height, width, 3), dtype=np.uint8)
-        test_img.fill(100)  # Medium gray background
-        
-        # Add various patterns that should trigger edge detection
-        # Central rectangle
-        cv2.rectangle(test_img, (width//4, height//4), (3*width//4, 3*height//4), (220, 220, 220), 2)
-        
-        # Diagonal lines
-        cv2.line(test_img, (0, 0), (width, height), (200, 200, 200), 2)
-        cv2.line(test_img, (0, height), (width, 0), (200, 200, 200), 2)
-        
-        # Add some text
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        cv2.putText(test_img, 'Edge Detection Test', (width//3, height//2), 
-                    font, 1, (240, 240, 240), 2)
-                    
-        # Create a checker pattern in one corner
-        square_size = 20
-        for i in range(5):
-            for j in range(5):
-                if (i + j) % 2 == 0:
-                    x, y = width - (j+1)*square_size, height - (i+1)*square_size
-                    cv2.rectangle(test_img, (x, y), (x+square_size, y+square_size), (200, 200, 200), -1)
-        
-        # Save the input test image
-        input_path = os.path.join(debug_dir, 'test_pattern_input.jpg')
-        try:
-            cv2.imwrite(input_path, test_img)
-        except Exception as e:
-            logger.error(f"Failed to save test pattern input: {e}")
-            sio.emit('error', {'message': f"Failed to save test pattern: {str(e)}"}, to=sid)
-            return False
-        
-        # Process the test image - same steps as in process_frame
-        gray = cv2.cvtColor(test_img, cv2.COLOR_BGR2GRAY)
-        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-        edges = cv2.Canny(blurred, 20, 80)
-        
-        # Save the edges image
-        edges_path = os.path.join(debug_dir, 'test_pattern_edges.jpg')
-        try:
-            cv2.imwrite(edges_path, edges)
-        except Exception as e:
-            logger.error(f"Failed to save test pattern edges: {e}")
-        
-        # Dilate edges
-        kernel = np.ones((3, 3), np.uint8)
-        edges = cv2.dilate(edges, kernel, iterations=3)
-        
-        # Create overlay
-        overlay = np.zeros_like(test_img)
-        overlay[edges > 0] = [0, 0, 255] 
-        
-        # Save the overlay
-        overlay_path = os.path.join(debug_dir, 'test_pattern_overlay.jpg')
-        try:
-            cv2.imwrite(overlay_path, overlay)
-        except Exception as e:
-            logger.error(f"Failed to save test pattern overlay: {e}")
-        
-        result = test_img.copy()
-        result[edges > 0] = [0, 0, 255] 
-        
-        # Add border
-        border_width = 30
-        result[0:border_width, :] = [0, 0, 255]  # Top border
-        result[-border_width:, :] = [0, 0, 255]  # Bottom border
-        result[:, 0:border_width] = [0, 0, 255]  # Left border
-        result[:, -border_width:] = [0, 0, 255]  # Right border
-        
-        # Save the result
-        result_path = os.path.join(debug_dir, 'test_pattern_result.jpg')
-        try:
-            cv2.imwrite(result_path, result)
-        except Exception as e:
-            logger.error(f"Failed to save test pattern result: {e}")
-        
-        # Send back confirmation
-        message = {
-            'message': f"Test images created in {debug_dir} directory",
-            'files': [
-                f"{debug_dir}/test_pattern_input.jpg",
-                f"{debug_dir}/test_pattern_edges.jpg", 
-                f"{debug_dir}/test_pattern_overlay.jpg",
-                f"{debug_dir}/test_pattern_result.jpg"
-            ]
-        }
-        sio.emit('test_image_created', message, to=sid)
-        
-        return True
-    except Exception as e:
-        logger.error(f"Error generating test pattern: {e}")
-        sio.emit('error', {'message': f"Error generating test pattern: {str(e)}"}, to=sid)
-        return False
+    pass
 
 @sio.event
 def process_frame(sid, data):
@@ -227,7 +105,7 @@ def process_frame(sid, data):
 
 @sio.event
 def disconnect(sid):
-    pass  # Removed logging
+    pass
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
