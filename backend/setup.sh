@@ -3,7 +3,7 @@
 # Exit on error
 set -e
 
-echo "Setting up focus peaking backend..."
+echo "Setting up edge detection backend..."
 
 # Check if Python is installed
 if ! command -v python3 &> /dev/null; then
