@@ -1,0 +1,24 @@
+# Python backend
+backend/venv/
+backend/__pycache__/
+backend/*.py[cod]
+backend/*$py.class
+backend/debug_frames/
+backend/.env
+
+# Frontend (already covered in frontend/.gitignore, but including core items here)
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+
+# System files
+.DS_Store
+*.swp
+*~
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs
+*.log 
