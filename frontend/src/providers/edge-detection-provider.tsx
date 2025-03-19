@@ -5,6 +5,7 @@ import {
   useRef,
   ReactNode,
   RefObject,
+  useEffect,
 } from "react";
 import { useVideo, VideoSource } from "@/hooks/use-video";
 
@@ -42,6 +43,7 @@ type EdgeDetectionContextType = {
 
   switchToCamera: () => Promise<void>;
   switchToFileVideo: () => void;
+  handleFileUpload: (file: File) => Promise<void>;
 };
 
 const EdgeDetectionContext = createContext<
@@ -70,7 +72,8 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
   const [sensitivity, setSensitivity] = useState([50]);
   const [edgeColor, setEdgeColor] = useState("red");
 
-  const [videoSource, setVideoSource] = useState("sample");
+  const [videoSource, setVideoSource] = useState("upload");
+  const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
 
   const toggleEdgeDetection = () => {
     setEdgeDetectionEnabled((prev) => !prev);
@@ -84,6 +87,7 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
     } else if (source === "sample") {
       switchToFileVideo();
     }
+    // Upload is handled by the file input change handler
   };
 
   // Switch to camera source
@@ -108,6 +112,38 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
       url: "/test.mp4",
     });
   };
+
+  // Handle uploaded file
+  const handleFileUpload = async (file: File): Promise<void> => {
+    // Validate that it's a video file
+    if (!file.type.startsWith("video/")) {
+      alert("Please upload a valid video file (.mp4)");
+      return;
+    }
+
+    if (uploadedFileUrl) {
+      URL.revokeObjectURL(uploadedFileUrl);
+    }
+
+    const fileUrl = URL.createObjectURL(file);
+    setUploadedFileUrl(fileUrl);
+
+    await changeSource({
+      type: "file",
+      url: fileUrl,
+    });
+
+    setEdgeDetectionEnabled(true);
+    play();
+  };
+
+  useEffect(() => {
+    return () => {
+      if (uploadedFileUrl) {
+        URL.revokeObjectURL(uploadedFileUrl);
+      }
+    };
+  }, [uploadedFileUrl]);
 
   // Context value
   const value: EdgeDetectionContextType = {
@@ -135,6 +171,7 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
     setEdgeColor,
     switchToCamera,
     switchToFileVideo,
+    handleFileUpload,
   };
 
   return (
