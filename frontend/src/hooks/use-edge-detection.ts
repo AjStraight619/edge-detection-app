@@ -211,9 +211,7 @@ export const useCameraEdgeDetection = ({
     const video = videoRef.current;
 
     if (!isEdgeDetectionEnabled) {
-      setConnectionStatus(
-        socket.connected ? "connected but inactive" : "disabled"
-      );
+      setConnectionStatus(socket.connected ? "connected" : "disconnected");
       // Stop animation frame if it's running
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
