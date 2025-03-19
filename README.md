@@ -23,7 +23,7 @@
 
 1. Clone this repository:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/AjStraight619/edge-detection-app.git
    cd edge-detection-app
    ```
 
