@@ -3,7 +3,7 @@
 # Exit on error
 set -e
 
-echo "Starting focus peaking backend server..."
+echo "Starting edge detection backend server..."
 
 # Check if virtual environment exists
 if [ ! -d "venv" ]; then
@@ -21,5 +21,5 @@ if ! python -c "import socketio, eventlet, cv2, numpy, PIL" &> /dev/null; then
 fi
 
 # Start the server
-echo "Server starting on port 5001..."
+echo "Server starting on port 8000..."
 python server.py 
