@@ -2,28 +2,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, Video } from "lucide-react";
 import SettingsTab from "@/components/settings/settings-tab";
 import SourceTab from "@/components/settings/source-tab";
+import { useEdgeDetectionContext } from "@/providers/edge-detection-provider";
 
-type ControlsPanelProps = {
-  isPeakingEnabled: boolean;
-  setIsPeakingEnabled: (enabled: boolean) => void;
-  sensitivity: number[];
-  setSensitivity: (sensitivity: number[]) => void;
-  peakingColor: string;
-  setPeakingColor: (color: string) => void;
-  videoSource: string;
-  handleVideoSourceChange: (source: string) => void;
-};
+export default function Controls() {
+  const {
+    isEdgeDetectionEnabled,
+    setEdgeDetectionEnabled,
+    sensitivity,
+    setSensitivity,
+    edgeColor,
+    setEdgeColor,
+    videoSource,
+    handleVideoSourceChange,
+  } = useEdgeDetectionContext();
 
-export default function Controls({
-  isPeakingEnabled,
-  setIsPeakingEnabled,
-  sensitivity,
-  setSensitivity,
-  peakingColor,
-  setPeakingColor,
-  videoSource,
-  handleVideoSourceChange,
-}: ControlsPanelProps) {
   return (
     <Tabs defaultValue="source">
       <TabsList className="grid grid-cols-2 mb-4">
@@ -46,12 +38,12 @@ export default function Controls({
 
       <TabsContent value="settings">
         <SettingsTab
-          isPeakingEnabled={isPeakingEnabled}
-          setIsPeakingEnabled={setIsPeakingEnabled}
+          isEdgeDetectionEnabled={isEdgeDetectionEnabled}
+          setEdgeDetectionEnabled={setEdgeDetectionEnabled}
           sensitivity={sensitivity}
           setSensitivity={setSensitivity}
-          peakingColor={peakingColor}
-          setPeakingColor={setPeakingColor}
+          edgeColor={edgeColor}
+          setEdgeColor={setEdgeColor}
         />
       </TabsContent>
     </Tabs>

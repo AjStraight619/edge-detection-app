@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Video, Camera } from "lucide-react";
+import { useEdgeDetectionContext } from "@/providers/edge-detection-provider";
 
 type SourceTabProps = {
   videoSource: string;
@@ -12,6 +13,8 @@ export default function SourceTab({
   videoSource,
   handleVideoSourceChange,
 }: SourceTabProps) {
+  const { switchToCamera } = useEdgeDetectionContext();
+
   return (
     <Card>
       <CardContent className="pt-6 space-y-6">
@@ -53,7 +56,9 @@ export default function SourceTab({
               Please allow camera access when prompted to use your webcam as the
               video source.
             </p>
-            <Button className="w-full">Enable Webcam</Button>
+            <Button className="w-full" onClick={switchToCamera}>
+              Enable Webcam
+            </Button>
           </div>
         )}
       </CardContent>
