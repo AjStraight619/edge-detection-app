@@ -1,51 +1,86 @@
-# Focus Peaking Application
+# Edge Detection App
 
-A tool for detecting and highlighting in-focus areas in video using edge detection.
+## Features
+
+- **Real-time Edge Detection**: Processes video frames to identify and highlight edges and contours
+- **Color Customization**: Choose different colors for the edge highlighting
+- **Source Options**: Process video files or webcam input
+- **Simple UI**: Clean interface with intuitive controls
+- **Cross-platform**: Works on macOS, Windows, and Linux
+
+## Tech Stack
+
+- **Frontend**: React, TypeScript, Tailwind CSS
+- **Backend**: Python, OpenCV, Socket.IO
+- **Communication**: Real-time bidirectional data transfer
 
 ## Prerequisites
 
-Before running this application, you need:
-
-- **Python 3.7+**: Required for the backend processing
-  - Install from [python.org](https://www.python.org/downloads/)
-  - Verify with `python3 --version`
-
-- **Node.js**: Required for the React frontend
-  - Install from [nodejs.org](https://nodejs.org/)
-  - Verify with `node --version`
+- **Python 3.7+** (for backend processing)
+- **Node.js** (for React frontend)
 
 ## Quick Start
 
-1. Clone this repository
-2. Place your test video file in `frontend/public/` directory (name it `test.mp4`)
-3. Make the scripts executable (only needed once):
-   ```
-   chmod +x backend/setup.sh backend/start.sh start-app.sh
-   ```
-4. Start the application:
-   ```
-   ./start-app.sh
+1. Clone this repository:
+   ```bash
+   git clone <repository-url>
+   cd edge-detection-app
    ```
 
-This will:
-- Set up the Python virtual environment
-- Install all required Python packages
+2. Run the application:
+   ```bash
+   # On macOS/Linux
+   ./start-app.sh
+   
+   # On Windows
+   bash start-app.sh
+   ```
+
+If you get a "permission denied" error, run:
+```bash
+chmod +x start-app.sh backend/setup.sh backend/start.sh
+./start-app.sh
+```
+
+The setup script will automatically:
+- Make all scripts executable
+- Create a Python virtual environment
+- Install all required dependencies
 - Start the backend server
-- Launch the React frontend
+- Launch the frontend development server
+
+## Project Structure
+
+```
+edge-detection-app/
+├── backend/             # Python backend
+│   ├── server.py        # Socket.IO server with OpenCV processing
+│   ├── requirements.txt # Python dependencies
+│   ├── setup.sh         # Backend setup script
+│   └── start.sh         # Backend start script
+├── frontend/            # React frontend
+│   ├── src/             # Source code
+│   │   ├── components/  # React components
+│   │   ├── providers/   # Context providers
+│   │   └── ...
+│   └── public/          # Static assets
+└── start-app.sh         # Main application launcher
+```
 
 ## Manual Setup
 
 If you prefer to set up components separately:
 
-### Backend Setup
-```
+### Backend
+```bash
 cd backend
+chmod +x setup.sh start.sh  # If needed
 ./setup.sh  # Creates virtual environment and installs dependencies
 ./start.sh  # Starts the backend server
 ```
 
-### Frontend Setup
-```
+### Frontend
+```bash
 cd frontend
 npm install
 npm run dev
@@ -53,14 +88,26 @@ npm run dev
 
 ## How It Works
 
-1. The frontend captures video frames
-2. Frames are sent to the Python backend for processing
-3. The backend detects edges (high contrast areas) which typically indicate in-focus regions
-4. Processed frames with highlighted focus areas are sent back to the frontend
-5. The frontend displays the original video with focus peaking overlay
+1. The frontend captures video frames from either a file or webcam
+2. Frames are sent to the Python backend via Socket.IO
+3. The backend uses OpenCV to detect edges and contours in the image
+4. Processed frames with highlighted edges are returned to the frontend
+5. The frontend displays the original video with edge detection overlay
 
 ## Troubleshooting
 
-- Error "port 5001 already in use": Kill the process using port 5001 or change the port in backend/server.py
-- Issues with Python packages: Run `cd backend && ./setup.sh` again to reinstall dependencies
-- If OpenCV doesn't install correctly, you may need additional system libraries. See the OpenCV documentation for your operating system. 
+- **Permission errors**: Run `chmod +x start-app.sh backend/setup.sh backend/start.sh` to make scripts executable
+- **Port 5001 in use**: Kill the process using port 5001 or change the port in backend/server.py
+- **Dependency issues**: Run `cd backend && ./setup.sh` to reinstall dependencies
+- **OpenCV installation problems**: You may need additional system libraries. See the [OpenCV documentation](https://docs.opencv.org/master/df/d65/tutorial_table_of_content_introduction.html) for your OS.
+- **Video playback issues**: Make sure your video file is in a compatible format (MP4 recommended)
+- **Windows users**: You may need to install Git Bash or WSL to run the bash scripts
+
+## Development
+
+- The backend auto-detects changes to the Python code
+- The frontend uses Vite's hot module replacement for fast development
+
+## License
+
+[MIT License](LICENSE) 
