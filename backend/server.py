@@ -8,14 +8,14 @@ from PIL import Image
 import os
 import logging
 
-# Setup logging with more details
+# Setup minimal logging for errors only
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.ERROR,  # Changed from INFO to ERROR
+    format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger('edge-detection-server')
 
-# Create Socket.io server with enhanced logging
+# Create Socket.io server with logging disabled
 sio = socketio.Server(
     cors_allowed_origins='*',
     logger=False,
@@ -25,51 +25,35 @@ app = socketio.WSGIApp(sio)
 
 @sio.event
 def connect(sid, environ):
-    logger.info(f'Client connected: {sid}')
+    pass  # Removed logging
 
 @sio.event
 def test_event(sid, data):
-    logger.info(f'Received test event from {sid}: {data}')
     sio.emit('test_response', 'Hello from server', to=sid)
 
 @sio.event
 def generate_test_image(sid):
     """Create and process a test image with patterns that should show edge detection"""
     try:
-        logger.info(f"Starting test image generation for client {sid}")
-        
         debug_dir = 'debug_frames'
-        logger.info(f"Checking for debug directory: {debug_dir}")
-        
-        import os.path
-        abs_path = os.path.abspath(debug_dir)
-        logger.info(f"Absolute path for debug directory: {abs_path}")
         
         if not os.path.exists(debug_dir):
-            logger.info(f"Directory {debug_dir} does not exist, creating it")
             try:
                 os.makedirs(debug_dir)
-                logger.info(f"Successfully created directory: {debug_dir}")
             except Exception as e:
-                logger.error(f"Failed to create directory {debug_dir}: {e}")
                 # Try creating in current working directory
-                cwd = os.getcwd()
-                logger.info(f"Trying to create directory in current working directory: {cwd}")
                 try:
+                    cwd = os.getcwd()
                     full_path = os.path.join(cwd, debug_dir)
                     os.makedirs(full_path)
                     debug_dir = full_path
-                    logger.info(f"Successfully created directory in CWD: {full_path}")
                 except Exception as e2:
-                    logger.error(f"Failed to create directory in CWD: {e2}")
+                    logger.error(f"Failed to create debug directory: {e2}")
                     sio.emit('error', {'message': f"Could not create debug directory: {str(e2)}"}, to=sid)
                     return False
-        else:
-            logger.info(f"Directory {debug_dir} already exists")
             
         # Create a test image with patterns that should trigger edge detection
         width, height = 640, 480
-        logger.info(f"Creating test image with dimensions {width}x{height}")
         test_img = np.zeros((height, width, 3), dtype=np.uint8)
         test_img.fill(100)  # Medium gray background
         
@@ -96,27 +80,22 @@ def generate_test_image(sid):
         
         # Save the input test image
         input_path = os.path.join(debug_dir, 'test_pattern_input.jpg')
-        logger.info(f"Attempting to save input test image to: {input_path}")
         try:
             cv2.imwrite(input_path, test_img)
-            logger.info(f"Successfully saved test pattern input to {input_path}")
         except Exception as e:
             logger.error(f"Failed to save test pattern input: {e}")
             sio.emit('error', {'message': f"Failed to save test pattern: {str(e)}"}, to=sid)
             return False
         
         # Process the test image - same steps as in process_frame
-        logger.info("Processing test image for edge detection")
         gray = cv2.cvtColor(test_img, cv2.COLOR_BGR2GRAY)
         blurred = cv2.GaussianBlur(gray, (5, 5), 0)
         edges = cv2.Canny(blurred, 20, 80)
         
         # Save the edges image
         edges_path = os.path.join(debug_dir, 'test_pattern_edges.jpg')
-        logger.info(f"Saving edges image to: {edges_path}")
         try:
             cv2.imwrite(edges_path, edges)
-            logger.info(f"Successfully saved test pattern edges to {edges_path}")
         except Exception as e:
             logger.error(f"Failed to save test pattern edges: {e}")
         
@@ -130,10 +109,8 @@ def generate_test_image(sid):
         
         # Save the overlay
         overlay_path = os.path.join(debug_dir, 'test_pattern_overlay.jpg')
-        logger.info(f"Saving overlay image to: {overlay_path}")
         try:
             cv2.imwrite(overlay_path, overlay)
-            logger.info(f"Successfully saved test pattern overlay to {overlay_path}")
         except Exception as e:
             logger.error(f"Failed to save test pattern overlay: {e}")
         
@@ -149,15 +126,12 @@ def generate_test_image(sid):
         
         # Save the result
         result_path = os.path.join(debug_dir, 'test_pattern_result.jpg')
-        logger.info(f"Saving result image to: {result_path}")
         try:
             cv2.imwrite(result_path, result)
-            logger.info(f"Successfully saved test pattern result to {result_path}")
         except Exception as e:
             logger.error(f"Failed to save test pattern result: {e}")
         
         # Send back confirmation
-        logger.info("Sending test_image_created event back to client")
         message = {
             'message': f"Test images created in {debug_dir} directory",
             'files': [
@@ -167,27 +141,21 @@ def generate_test_image(sid):
                 f"{debug_dir}/test_pattern_result.jpg"
             ]
         }
-        logger.info(f"Message payload: {message}")
         sio.emit('test_image_created', message, to=sid)
-        logger.info(f"Test image creation process completed successfully for client {sid}")
         
         return True
     except Exception as e:
-        logger.error(f"Error generating test pattern: {e}", exc_info=True)
+        logger.error(f"Error generating test pattern: {e}")
         sio.emit('error', {'message': f"Error generating test pattern: {str(e)}"}, to=sid)
         return False
 
 @sio.event
 def process_frame(sid, data):
     try:
-        # Log every request for debugging
-        logger.info(f"Received frame request from {sid}, isPeakingEnabled: {data.get('isPeakingEnabled', 'NOT_PROVIDED')}")
-        
         # Check if data contains frame
         if isinstance(data, dict) and 'frame' in data:
             # Skip processing if isPeakingEnabled is explicitly set to False
             if data.get('isPeakingEnabled') is False:
-                logger.info(f"Skipping frame processing because isPeakingEnabled is False")
                 return
                 
             try:
@@ -201,8 +169,6 @@ def process_frame(sid, data):
                 # Keep track of frame numbers for response
                 process_frame.counter = getattr(process_frame, 'counter', 0) + 1
                 frame_num = process_frame.counter
-                
-                logger.info(f"Processing frame #{frame_num} with edge_color: {edge_color}")
                 
                 # Convert to grayscale for edge detection
                 gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
@@ -249,21 +215,21 @@ def process_frame(sid, data):
                 
                 sio.emit('processed_frame', response, to=sid)
             except Exception as e:
-                logger.error(f"Error processing image: {e}", exc_info=True)
+                logger.error(f"Error processing image: {e}")
                 sio.emit('error', {'message': f"Error processing image: {e}"}, to=sid)
                 return
         else:
-            logger.error(f"Invalid data format received from {sid}")
+            logger.error(f"Invalid data format received")
             sio.emit('error', {'message': "Invalid data format: expected 'frame' in JSON object"}, to=sid)
     except Exception as e:
-        logger.error(f"Error in process_frame: {e}", exc_info=True)
+        logger.error(f"Error in process_frame: {e}")
         sio.emit('error', {'message': str(e)}, to=sid)
 
 @sio.event
 def disconnect(sid):
-    logger.info(f'Client disconnected: {sid}')
+    pass  # Removed logging
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
-    logger.info(f"Starting edge detection server on port {port}")
+    print(f"Starting edge detection server on port {port}")
     eventlet.wsgi.server(eventlet.listen(('0.0.0.0', port)), app) 
