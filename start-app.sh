@@ -22,33 +22,28 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
-# Get the absolute path to the project directory
-PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
-
-# Check if backend is already set up, if not run setup
-if [ ! -d "$PROJECT_DIR/backend/venv" ]; then
-    echo "Setting up backend first..."
-    (cd "$PROJECT_DIR/backend" && ./setup.sh)
-    echo "Backend setup complete."
+# Check if backend is already set up
+if [ ! -d "backend/venv" ]; then
+    echo "Setting up backend..."
+    (cd backend && ./setup.sh)
 fi
 
-# Check if frontend dependencies are installed
-if [ ! -d "$PROJECT_DIR/frontend/node_modules" ]; then
-    echo "Installing frontend dependencies..."
-    (cd "$PROJECT_DIR/frontend" && npm install)
-    echo "Frontend dependencies installed."
-fi
+# Start backend in background
+echo "Starting backend server..."
+(cd backend && ./start.sh) &
+BACKEND_PID=$!
 
-# Open a new terminal window for the backend
-echo "Starting backend in a new terminal window..."
-osascript -e "tell application \"Terminal\" to do script \"cd \\\"$PROJECT_DIR/backend\\\" && ./start.sh; exit\""
-
-# Give the backend a moment to start
+# Sleep to let backend start
 sleep 2
 
-# Open a new terminal window for the frontend
-echo "Starting frontend in a new terminal window..."
-osascript -e "tell application \"Terminal\" to do script \"cd \\\"$PROJECT_DIR/frontend\\\" && npm run dev; exit\""
+# Check if node_modules exists in frontend, if not, install dependencies
+if [ ! -d "frontend/node_modules" ]; then
+    echo "Installing frontend dependencies..."
+    (cd frontend && npm install)
+fi
 
-echo "Edge Detection App started in separate terminals."
-echo "Close both terminal windows when you're done."
+echo "Starting frontend..."
+(cd frontend && npm run dev)
+
+# When the frontend is terminated, kill the backend too
+trap "echo 'Shutting down backend...' && kill $BACKEND_PID" EXIT
