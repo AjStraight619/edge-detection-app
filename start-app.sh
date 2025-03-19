@@ -3,7 +3,6 @@
 # Exit on error
 set -e
 
-# Make all scripts executable (self-healing)
 chmod +x "$(dirname "$0")/backend/setup.sh"
 chmod +x "$(dirname "$0")/backend/start.sh"
 chmod +x "$(dirname "$0")/start-app.sh"
