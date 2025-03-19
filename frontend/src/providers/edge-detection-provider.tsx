@@ -80,6 +80,33 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
   };
 
   const handleVideoSourceChange = (source: string) => {
+    // If we're currently using webcam and switching to a different source
+    if (videoSource === "webcam" && source !== "webcam") {
+      const video = videoRef.current;
+      if (video) {
+        try {
+          // Stop all tracks in the current stream if it exists
+          if (video.srcObject) {
+            const stream = video.srcObject as MediaStream;
+            stream.getTracks().forEach((track) => {
+              track.stop();
+            });
+          }
+
+          // Clear the video element completely
+          video.pause();
+          video.currentTime = 0;
+          video.srcObject = null;
+          video.src = "";
+          video.load(); // Force reload of the video element
+
+          console.log("Webcam forcibly stopped and video element cleared");
+        } catch (err) {
+          console.error("Error stopping webcam:", err);
+        }
+      }
+    }
+
     setVideoSource(source);
 
     if (source === "webcam") {
@@ -92,6 +119,20 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
 
   // Switch to camera source
   const switchToCamera = async () => {
+    // First ensure any existing streams are stopped
+    const video = videoRef.current;
+    if (video && video.srcObject) {
+      try {
+        const stream = video.srcObject as MediaStream;
+        stream.getTracks().forEach((track) => {
+          track.stop();
+        });
+        video.srcObject = null;
+      } catch (err) {
+        console.error("Error stopping previous stream:", err);
+      }
+    }
+
     await changeSource({
       type: "camera",
       constraints: {
@@ -107,10 +148,10 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
   };
 
   const switchToFileVideo = () => {
-    changeSource({
-      type: "file",
-      url: "/test.mp4",
-    });
+    // Just show a message since we no longer have a sample video
+    alert("Please upload a video file or use your webcam");
+    // Reset to upload mode
+    setVideoSource("upload");
   };
 
   // Handle uploaded file
@@ -121,6 +162,46 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Set source to upload explicitly
+    setVideoSource("upload");
+
+    // AGGRESSIVE cleanup of any webcam streams
+    // First try the videoRef approach
+    const video = videoRef.current;
+    if (video) {
+      // Stop any video that might be playing
+      video.pause();
+
+      // If there's a srcObject (likely a webcam), stop all its tracks
+      if (video.srcObject) {
+        try {
+          const stream = video.srcObject as MediaStream;
+          console.log("Stopping all tracks in current stream");
+          stream.getTracks().forEach((track) => {
+            console.log(`Stopping track: ${track.kind}`);
+            track.stop();
+          });
+          video.srcObject = null;
+        } catch (err) {
+          console.error("Error stopping webcam in handleFileUpload:", err);
+        }
+      }
+    }
+
+    // Additional brute-force approach: stop ALL media streams using the browser API
+    try {
+      if (navigator.mediaDevices) {
+        console.log("Attempting to stop all media streams");
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        devices.forEach((device) => {
+          console.log(`Found device: ${device.kind}, ${device.deviceId}`);
+        });
+      }
+    } catch (e) {
+      console.error("Error enumerating devices:", e);
+    }
+
+    // Clean up previous file URL if it exists
     if (uploadedFileUrl) {
       URL.revokeObjectURL(uploadedFileUrl);
     }
@@ -128,10 +209,15 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
     const fileUrl = URL.createObjectURL(file);
     setUploadedFileUrl(fileUrl);
 
-    await changeSource({
-      type: "file",
-      url: fileUrl,
-    });
+    // Now change to file source after explicitly stopping the webcam
+    try {
+      await changeSource({
+        type: "file",
+        url: fileUrl,
+      });
+    } catch (error) {
+      console.error("Error changing source:", error);
+    }
 
     setEdgeDetectionEnabled(true);
     play();

@@ -162,9 +162,8 @@ export const useCameraEdgeDetection = ({
       socket.connected &&
       !processingActiveRef.current &&
       !video.paused &&
-      // Default fps is 150
       // TODO: Integrate FPS control
-      now - lastProcessedTimeRef.current > 150;
+      now - lastProcessedTimeRef.current > 20;
 
     if (shouldProcess) {
       processingActiveRef.current = true;

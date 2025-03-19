@@ -24,7 +24,7 @@ export function useVideo(initialSource?: VideoSource) {
 
   // State for source management
   const [source, setSource] = useState<VideoSource>(
-    initialSource || { type: "file", url: "/test.mp4" }
+    initialSource || { type: "file", url: "" }
   );
 
   // Video state management

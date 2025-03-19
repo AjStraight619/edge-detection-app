@@ -51,16 +51,13 @@ export default function SourceTab({
       setUploadedFileName(file.name);
       setFileSize(formatFileSize(file.size));
 
-      // Create a wrapper around the file to track upload progress
+      // Simulate upload progress
       const trackUploadProgress = async (file: File) => {
-        // For actual implementation, we need to use XMLHttpRequest or fetch with a custom upload handler
-        // This is a more realistic simulation based on file size
-        const chunkSize = file.size / 100; // Divide file into 100 chunks for progress
+        const chunkSize = file.size / 100;
         let uploadedSize = 0;
 
         const processChunk = () => {
           return new Promise<void>((resolve) => {
-            // Simulate network delay based on file size
             const delay = Math.min(50, Math.max(10, file.size / 1000000));
             setTimeout(() => {
               uploadedSize += chunkSize;
@@ -99,14 +96,14 @@ export default function SourceTab({
         <div className="space-y-2">
           <Label>Video Source</Label>
           <div className="grid grid-cols-3 gap-2">
-            <Button
+            {/* <Button
               variant={videoSource === "sample" ? "default" : "outline"}
               className="w-full"
               onClick={() => handleVideoSourceChange("sample")}
             >
               <Video className="w-4 h-4 mr-2" />
               Sample
-            </Button>
+            </Button> */}
             <Button
               variant={videoSource === "upload" ? "default" : "outline"}
               className="w-full"

@@ -1,6 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Eye, EyeOff, Pause, Play, RefreshCw } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Pause,
+  Play,
+  RefreshCw,
+  Upload,
+  Camera,
+} from "lucide-react";
 import EdgeDetectionOverlay from "@/components/video/edge-detection-overlay";
 import RawVideo from "@/components/video/raw-video";
 import { useEdgeDetectionContext } from "@/providers/edge-detection-provider";
@@ -20,7 +28,12 @@ export default function VideoPlayer() {
     reset,
     currentSource,
     toggleEdgeDetection,
+    handleVideoSourceChange,
   } = useEdgeDetectionContext();
+
+  // Determine if we need to show the placeholder
+  const showPlaceholder =
+    !isPlaying && currentSource.type === "file" && !currentSource.url;
 
   return (
     <Card className="w-full overflow-hidden">
@@ -47,17 +60,55 @@ export default function VideoPlayer() {
             />
           </div>
 
-          <VideoControls
-            isEdgeDetectionEnabled={isEdgeDetectionEnabled}
-            isPlaying={isPlaying}
-            togglePlayPause={toggle}
-            toggleEdgeDetection={toggleEdgeDetection}
-            resetVideo={reset}
-            currentSource={currentSource.type}
-            duration={duration}
-            currentTime={currentTime}
-            formatTime={formatTime}
-          />
+          {/* Instructional Overlay */}
+          {showPlaceholder && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-40 p-6 text-center">
+              <h3 className="text-xl font-semibold text-white mb-2">
+                No Video Source Selected
+              </h3>
+              <p className="text-gray-300 mb-6 max-w-md">
+                Please upload a video file or use your webcam to begin edge
+                detection
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => {
+                    handleVideoSourceChange("upload");
+                  }}
+                  variant="default"
+                  size="sm"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Video
+                </Button>
+                <Button
+                  onClick={() => {
+                    handleVideoSourceChange("webcam");
+                  }}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Camera className="w-4 h-4 mr-2" />
+                  Use Webcam
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Only show controls if we have a video playing */}
+          {!showPlaceholder && (
+            <VideoControls
+              isEdgeDetectionEnabled={isEdgeDetectionEnabled}
+              isPlaying={isPlaying}
+              togglePlayPause={toggle}
+              toggleEdgeDetection={toggleEdgeDetection}
+              resetVideo={reset}
+              currentSource={currentSource.type}
+              duration={duration}
+              currentTime={currentTime}
+              formatTime={formatTime}
+            />
+          )}
         </div>
       </CardContent>
     </Card>
