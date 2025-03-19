@@ -1,6 +1,6 @@
-# Focus Peaking Backend
+# Edge Detection Backend
 
-This is the Python backend for the Focus Peaking application. It processes video frames to detect and highlight areas of high contrast, which typically correspond to in-focus areas.
+This is the Python backend for the Edge Detection application. It processes video frames to detect and highlight areas of high contrast, which typically correspond to edges and important details in the image.
 
 ## Requirements
 
@@ -27,7 +27,7 @@ Start the backend server:
 ./start.sh
 ```
 
-The server will listen on port 5000 by default.
+The server will listen on port 8000 by default.
 
 ## How It Works
 
@@ -40,12 +40,12 @@ The server will listen on port 5000 by default.
 
 - Socket.io Event: `process_frame`
   - Input: Base64 encoded image data
-  - Output: Base64 encoded processed image with focus peaking highlights
+  - Output: Base64 encoded processed image with edge detection highlights
 
 ## Troubleshooting
 
 If you experience issues:
 
 1. Make sure all dependencies are installed correctly
-2. Check that port 5000 is not being used by another application
+2. Check that port 8000 is not being used by another application
 3. Verify the frontend is properly configured to connect to the backend 
