@@ -112,7 +112,5 @@ npm run dev
 - **Windows users**: You may need to install Git Bash or WSL to run the bash scripts
 
 ## Development
-
-- The backend auto-detects changes to the Python code
 - The frontend uses Vite's hot module replacement for fast development
 
