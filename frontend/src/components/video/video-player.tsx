@@ -1,11 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Eye, EyeOff, Pause, Play, RefreshCw } from "lucide-react";
+import { Eye, EyeOff, Pause, Play, RefreshCw, Settings } from "lucide-react";
 import EdgeDetectionOverlay from "@/components/video/edge-detection-overlay";
 import RawVideo from "@/components/video/raw-video";
 import { useEdgeDetectionContext } from "@/providers/edge-detection-provider";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
-export default function VideoPlayer() {
+type VideoPlayerProps = {
+  onOpenControls?: () => void;
+};
+
+export default function VideoPlayer({ onOpenControls }: VideoPlayerProps) {
   const {
     videoRef,
     processDataCanvasRef,
@@ -20,9 +25,11 @@ export default function VideoPlayer() {
     reset,
     currentSource,
     toggleEdgeDetection,
+    isFileUploaded,
   } = useEdgeDetectionContext();
 
-  // Determine if we need to show the placeholder
+  const isMobile = useMediaQuery("(max-width: 1023px)");
+
   const showPlaceholder =
     !isPlaying && currentSource.type === "file" && !currentSource.url;
 
@@ -51,21 +58,26 @@ export default function VideoPlayer() {
             />
           </div>
 
-          {/* Instructional Overlay */}
           {showPlaceholder && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-40 p-6 text-center">
               <h3 className="text-xl font-semibold text-muted-foreground mb-2">
                 No Video Source Selected
               </h3>
               <p className="text-muted mb-6 max-w-md">
-                Please upload a video file or use your webcam to begin edge
-                detection
+                Please use the controls panel to upload a video or enable your
+                webcam
               </p>
+              {isMobile && onOpenControls && (
+                <Button onClick={onOpenControls} className="mt-2">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Open Controls
+                </Button>
+              )}
             </div>
           )}
 
           {/* Only show controls if we have a video playing */}
-          {!showPlaceholder && (
+          {!isFileUploaded && isPlaying && (
             <VideoControls
               isEdgeDetectionEnabled={isEdgeDetectionEnabled}
               isPlaying={isPlaying}
@@ -76,6 +88,8 @@ export default function VideoPlayer() {
               duration={duration}
               currentTime={currentTime}
               formatTime={formatTime}
+              onOpenControls={onOpenControls}
+              isMobile={isMobile}
             />
           )}
         </div>
@@ -108,6 +122,8 @@ type VideoControlsProps = {
   duration: number;
   currentTime: number;
   formatTime: (time: number) => string;
+  onOpenControls?: () => void;
+  isMobile?: boolean;
 };
 
 function VideoControls({
@@ -120,6 +136,8 @@ function VideoControls({
   duration,
   currentTime,
   formatTime,
+  onOpenControls,
+  isMobile,
 }: VideoControlsProps) {
   return (
     <>
@@ -167,6 +185,13 @@ function VideoControls({
               {isEdgeDetectionEnabled ? "Hide Edges" : "Show Edges"}
             </span>
           </Button>
+
+          {/* Settings button for mobile */}
+          {isMobile && onOpenControls && (
+            <Button variant="secondary" size="icon" onClick={onOpenControls}>
+              <Settings className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </div>
     </>
