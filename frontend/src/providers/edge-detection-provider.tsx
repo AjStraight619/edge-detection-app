@@ -8,6 +8,8 @@ import {
   useEffect,
 } from "react";
 import { useVideo, VideoSource } from "@/hooks/use-video";
+import { clearCanvas } from "@/lib/utils";
+import { useCameraEdgeDetection } from "@/hooks/use-edge-detection";
 
 // TODO: Refactor this into two separate contexts, video-provider and edge-detection
 
@@ -48,6 +50,9 @@ type EdgeDetectionContextType = {
   switchToCamera: () => Promise<void>;
   switchToFileVideo: () => void;
   handleFileUpload: (file: File) => Promise<void>;
+
+  // WebSocket status
+  connectionStatus: string;
 };
 
 const EdgeDetectionContext = createContext<
@@ -110,22 +115,8 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
 
     // Clear all canvases regardless of the source change
     const clearCanvases = () => {
-      const edgeCanvas = edgeDetectionCanvasRef.current;
-      if (edgeCanvas) {
-        const ctx = edgeCanvas.getContext("2d");
-        if (ctx) {
-          ctx.clearRect(0, 0, edgeCanvas.width, edgeCanvas.height);
-        }
-      }
-
-      // Clear the process data canvas
-      const dataCanvas = processDataCanvasRef.current;
-      if (dataCanvas) {
-        const ctx = dataCanvas.getContext("2d");
-        if (ctx) {
-          ctx.clearRect(0, 0, dataCanvas.width, dataCanvas.height);
-        }
-      }
+      clearCanvas(edgeDetectionCanvasRef.current);
+      clearCanvas(processDataCanvasRef.current);
     };
 
     if (videoSource === "webcam" && source !== "webcam") {
@@ -236,21 +227,8 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
 
     // Clear all canvases to avoid leaving webcam frames visible
     const clearCanvases = () => {
-      const edgeCanvas = edgeDetectionCanvasRef.current;
-      if (edgeCanvas) {
-        const ctx = edgeCanvas.getContext("2d");
-        if (ctx) {
-          ctx.clearRect(0, 0, edgeCanvas.width, edgeCanvas.height);
-        }
-      }
-
-      const dataCanvas = processDataCanvasRef.current;
-      if (dataCanvas) {
-        const ctx = dataCanvas.getContext("2d");
-        if (ctx) {
-          ctx.clearRect(0, 0, dataCanvas.width, dataCanvas.height);
-        }
-      }
+      clearCanvas(edgeDetectionCanvasRef.current);
+      clearCanvas(processDataCanvasRef.current);
     };
 
     clearCanvases();
@@ -291,6 +269,17 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
     };
   }, [uploadedFileUrl]);
 
+  // TODO: Implement edge detection using a separate hook
+  const { connectionStatus } = useCameraEdgeDetection({
+    videoRef,
+    processDataCanvasRef,
+    edgeDetectionCanvasRef,
+    isEdgeDetectionEnabled,
+    isPlaying,
+    edgeColor,
+    sensitivity,
+  });
+
   // Context value
   const value: EdgeDetectionContextType = {
     videoRef,
@@ -320,6 +309,7 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
     handleFileUpload,
     isFileUploaded,
     setIsFileUploaded,
+    connectionStatus,
   };
 
   return (

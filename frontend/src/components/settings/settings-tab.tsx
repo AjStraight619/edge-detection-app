@@ -2,7 +2,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { COLOR_OPTIONS } from "@/lib/constants";
+import { capitalizeFirstLetter } from "@/lib/utils";
 
 type SettingsTabProps = {
   isEdgeDetectionEnabled: boolean;
@@ -13,11 +15,11 @@ type SettingsTabProps = {
   setEdgeColor: (color: string) => void;
 };
 
-// TODO: Add sensitivity slider
-
 export default function SettingsTab({
   isEdgeDetectionEnabled,
   setEdgeDetectionEnabled,
+  sensitivity,
+  setSensitivity,
   edgeColor,
   setEdgeColor,
 }: SettingsTabProps) {
@@ -41,19 +43,23 @@ export default function SettingsTab({
         <div className="space-y-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              {/* <Label htmlFor="sensitivity">Sensitivity</Label> */}
-              {/* <span className="text-sm text-muted-foreground">
-                {sensitivity}%
-              </span> */}
+              <Label htmlFor="sensitivity">Sensitivity</Label>
+              <span className="text-sm text-muted-foreground">
+                {sensitivity[0]}%
+              </span>
             </div>
-            {/* <Slider
+            <Slider
               id="sensitivity"
               min={0}
               max={100}
               step={1}
               value={sensitivity}
               onValueChange={setSensitivity}
-            /> */}
+              disabled={!isEdgeDetectionEnabled}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Adjust to control the sensitivity of edge detection
+            </p>
           </div>
 
           {/* Color Selection */}
@@ -95,7 +101,7 @@ function ColorButton({
         style={{ backgroundColor: color }}
         className="w-3 h-3 rounded-full mr-2"
       ></div>
-      {color.charAt(0).toUpperCase() + color.slice(1)}
+      {capitalizeFirstLetter(color)}
     </Button>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, type RefObject, useRef, useCallback } from "react";
 import { useWebSocket } from "./use-websocket";
 import { FRAME_INTERVAL_MS } from "@/lib/constants";
+import { drawImageToCanvas, clearCanvas } from "@/lib/utils";
 
 type UseFocusPeakingProps = {
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -9,30 +10,12 @@ type UseFocusPeakingProps = {
   isEdgeDetectionEnabled: boolean;
   isPlaying: boolean;
   edgeColor: string;
+  sensitivity?: number[];
 };
 
-interface ProcessedFrameData {
+type ProcessedFrameData = {
   frame: string;
   frame_number: number;
-}
-
-// Helper function to draw an image to a canvas
-const drawImageToCanvas = (
-  canvas: HTMLCanvasElement,
-  img: HTMLImageElement
-) => {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-
-  // Set dimensions to match the image
-  if (canvas.width !== img.width || canvas.height !== img.height) {
-    canvas.width = img.width;
-    canvas.height = img.height;
-  }
-
-  // Draw the image to the canvas
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 };
 
 // Helper function to capture a frame from video to canvas
@@ -67,7 +50,7 @@ const captureVideoFrame = (
 };
 
 /**
- * Might not need useCallback hooks because we are using React 19. However, using them for now to avoid potential issues.
+ * ! Might not need useCallback hooks because we are using React 19. However, using them for now to avoid potential issues.
  */
 
 export const useCameraEdgeDetection = ({
@@ -77,6 +60,7 @@ export const useCameraEdgeDetection = ({
   isEdgeDetectionEnabled,
   isPlaying,
   edgeColor,
+  sensitivity = [50],
 }: UseFocusPeakingProps) => {
   // Use the websocket hook
   const { socketRef, connectionStatus, setConnectionStatus } = useWebSocket();
@@ -86,9 +70,11 @@ export const useCameraEdgeDetection = ({
   const frameCountRef = useRef(0);
   const lastProcessedTimeRef = useRef(Date.now());
   const currentEdgeColorRef = useRef(edgeColor);
+  const currentSensitivityRef = useRef(sensitivity[0]);
 
   useEffect(() => {
     currentEdgeColorRef.current = edgeColor;
+    currentSensitivityRef.current = sensitivity[0];
 
     if (
       isEdgeDetectionEnabled &&
@@ -99,7 +85,7 @@ export const useCameraEdgeDetection = ({
       processingActiveRef.current = false;
       lastProcessedTimeRef.current = 0; // Reset time to force immediate processing
     }
-  }, [edgeColor, isEdgeDetectionEnabled, isPlaying, videoRef]);
+  }, [edgeColor, sensitivity, isEdgeDetectionEnabled, isPlaying, videoRef]);
 
   // Handle processed frames coming back from server
   const handleProcessedFrame = useCallback(
@@ -122,10 +108,7 @@ export const useCameraEdgeDetection = ({
           drawImageToCanvas(displayCanvas, img);
         } else {
           // Clear canvas if edge detection is disabled
-          const ctx = displayCanvas.getContext("2d");
-          if (ctx) {
-            ctx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
-          }
+          clearCanvas(displayCanvas);
         }
       };
 
@@ -182,6 +165,7 @@ export const useCameraEdgeDetection = ({
         socket.emit("process_frame", {
           frame: base64Data,
           edge_color: currentEdgeColorRef.current,
+          sensitivity: currentSensitivityRef.current,
         });
       } else {
         processingActiveRef.current = false;
@@ -198,13 +182,7 @@ export const useCameraEdgeDetection = ({
     // Always clear the canvas when edge detection is disabled
     if (!isEdgeDetectionEnabled) {
       // Clear the edge detection canvas immediately
-      const edgeCanvas = edgeDetectionCanvasRef.current;
-      if (edgeCanvas) {
-        const ctx = edgeCanvas.getContext("2d");
-        if (ctx) {
-          ctx.clearRect(0, 0, edgeCanvas.width, edgeCanvas.height);
-        }
-      }
+      clearCanvas(edgeDetectionCanvasRef.current);
 
       // Also cancel any pending animation frames
       if (animationFrameRef.current) {
@@ -247,13 +225,7 @@ export const useCameraEdgeDetection = ({
       processFrame();
     } else {
       // Clear the canvas if we're not actively processing
-      const edgeCanvas = edgeDetectionCanvasRef.current;
-      if (edgeCanvas) {
-        const ctx = edgeCanvas.getContext("2d");
-        if (ctx) {
-          ctx.clearRect(0, 0, edgeCanvas.width, edgeCanvas.height);
-        }
-      }
+      clearCanvas(edgeDetectionCanvasRef.current);
     }
 
     return () => {
@@ -274,6 +246,7 @@ export const useCameraEdgeDetection = ({
     processDataCanvasRef,
     handleProcessedFrame,
     setConnectionStatus,
+    edgeDetectionCanvasRef,
   ]);
 
   return {

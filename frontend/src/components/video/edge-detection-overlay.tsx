@@ -2,13 +2,13 @@ import { type RefObject } from "react";
 import { useCameraEdgeDetection } from "@/hooks/use-edge-detection";
 import { useEdgeDetectionContext } from "@/providers/edge-detection-provider";
 
-interface FocusPeakingOverlayProps {
+type FocusPeakingOverlayProps = {
   videoRef: RefObject<HTMLVideoElement | null>;
   processDataCanvasRef: RefObject<HTMLCanvasElement | null>;
   edgeDetectionCanvasRef: RefObject<HTMLCanvasElement | null>;
   isPlaying: boolean;
   edgeColor: string;
-}
+};
 
 export default function EdgeDetectionOverlay({
   videoRef,
@@ -17,7 +17,7 @@ export default function EdgeDetectionOverlay({
   isPlaying,
   edgeColor,
 }: FocusPeakingOverlayProps) {
-  const { isEdgeDetectionEnabled } = useEdgeDetectionContext();
+  const { isEdgeDetectionEnabled, sensitivity } = useEdgeDetectionContext();
   const { connectionStatus } = useCameraEdgeDetection({
     videoRef,
     processDataCanvasRef,
@@ -25,6 +25,7 @@ export default function EdgeDetectionOverlay({
     isEdgeDetectionEnabled: isEdgeDetectionEnabled,
     isPlaying,
     edgeColor,
+    sensitivity,
   });
 
   return (

@@ -30,7 +30,22 @@ def process_frame(sid, data):
                 
             try:
                 frame_data = data['frame']
-                edge_color = data.get('edge_color', 'red')  
+                edge_color = data.get('edge_color', 'red')
+                sensitivity = data.get('sensitivity', 50)  # Default to 50% if not provided
+                
+                # Convert sensitivity to threshold values
+                # Higher sensitivity (higher value) = lower thresholds = more edges
+                # Lower sensitivity (lower value) = higher thresholds = fewer edges
+                sensitivity_factor = sensitivity / 50.0  # Normalize around 1.0
+                
+                # Scale thresholds inversely with sensitivity
+                # Lower thresholds = more edges detected = higher sensitivity
+                low_threshold = int(100 / sensitivity_factor)
+                high_threshold = int(200 / sensitivity_factor)
+                
+                # Ensure thresholds are in valid ranges
+                low_threshold = max(10, min(low_threshold, 100))
+                high_threshold = max(low_threshold + 50, min(high_threshold, 255))
                 
                 # Decode the base64 image
                 img_data = base64.b64decode(frame_data)
@@ -48,14 +63,17 @@ def process_frame(sid, data):
                 sharpened = cv2.filter2D(gray, -1, kernel_sharpen)
                 
                 # Apply a Gaussian blur to reduce noise while preserving edges
-                blurred = cv2.GaussianBlur(sharpened, (5, 5), 0)
+                blur_size = 5 if sensitivity < 70 else 3  # Less blur at high sensitivity
+                blurred = cv2.GaussianBlur(sharpened, (blur_size, blur_size), 0)
                 
-                # More precise edge detection (higher thresholds = fewer edges)
-                edges = cv2.Canny(blurred, 30, 100)
+                # More precise edge detection with sensitivity-adjusted thresholds
+                edges = cv2.Canny(blurred, low_threshold, high_threshold)
                 
-                # Smaller dilation to make edges thinner
-                kernel = np.ones((3, 3), np.uint8)
-                edges = cv2.dilate(edges, kernel, iterations=2)
+                # Adjust dilation based on sensitivity
+                kernel_size = 3
+                iterations = 1 if sensitivity > 70 else 2  # Thinner lines at high sensitivity
+                kernel = np.ones((kernel_size, kernel_size), np.uint8)
+                edges = cv2.dilate(edges, kernel, iterations=iterations)
                 
                 color_rgb = [255, 0, 0]  # Default: Red in RGB
                 if edge_color == 'green':

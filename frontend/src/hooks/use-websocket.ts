@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
-
+import { WS_URL } from "@/lib/constants";
 // Singleton socket instance
 let globalSocketInstance: Socket | null = null;
 
-export function useWebSocket(url: string = "http://localhost:8000") {
+export function useWebSocket(url: string = WS_URL) {
   const [connectionStatus, setConnectionStatus] =
     useState<string>("disconnected");
   const socketRef = useRef<Socket | null>(null);
