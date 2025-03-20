@@ -25,13 +25,15 @@ export default function VideoPlayer({ onOpenControls }: VideoPlayerProps) {
     reset,
     currentSource,
     toggleEdgeDetection,
-    isFileUploaded,
   } = useEdgeDetectionContext();
 
   const isMobile = useMediaQuery("(max-width: 1023px)");
 
-  const showPlaceholder =
-    !isPlaying && currentSource.type === "file" && !currentSource.url;
+  const hasLoadedVideo =
+    (currentSource.type === "file" && !!currentSource.url) ||
+    (currentSource.type === "camera" && videoRef.current?.srcObject !== null);
+
+  const showPlaceholder = !hasLoadedVideo;
 
   return (
     <Card className="w-full overflow-hidden">
@@ -76,8 +78,8 @@ export default function VideoPlayer({ onOpenControls }: VideoPlayerProps) {
             </div>
           )}
 
-          {/* Only show controls if we have a video playing */}
-          {!isFileUploaded && isPlaying && (
+          {/* Show controls when video is either playing OR paused but loaded */}
+          {hasLoadedVideo && (
             <VideoControls
               isEdgeDetectionEnabled={isEdgeDetectionEnabled}
               isPlaying={isPlaying}
