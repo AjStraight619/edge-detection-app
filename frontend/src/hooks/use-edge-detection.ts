@@ -27,9 +27,6 @@ const drawImageToCanvas = (
   if (canvas.width !== img.width || canvas.height !== img.height) {
     canvas.width = img.width;
     canvas.height = img.height;
-    console.log(
-      `Adjusted canvas size to match image: ${img.width}x${img.height}`
-    );
   }
 
   // Draw the image to the canvas
@@ -50,9 +47,6 @@ const captureVideoFrame = (
     canvas.width !== video.videoWidth ||
     canvas.height !== video.videoHeight
   ) {
-    console.log(
-      `Setting canvas size: ${video.videoWidth}x${video.videoHeight}`
-    );
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
   }
@@ -62,7 +56,6 @@ const captureVideoFrame = (
 
   try {
     // Higher quality for better image
-    // TODO: Integrate quality control
     const frame = canvas.toDataURL("image/jpeg", 0.9);
     const base64Data = frame.split(",")[1];
     return base64Data;
@@ -93,10 +86,8 @@ export const useCameraEdgeDetection = ({
   const lastProcessedTimeRef = useRef(Date.now());
   const currentEdgeColorRef = useRef(edgeColor);
 
-  // Update ref when color changes to ensure latest value in animation frame loop
   useEffect(() => {
     currentEdgeColorRef.current = edgeColor;
-    console.log(`Edge color updated to: ${edgeColor}`);
 
     if (
       isEdgeDetectionEnabled &&
@@ -125,7 +116,16 @@ export const useCameraEdgeDetection = ({
           return;
         }
 
-        drawImageToCanvas(displayCanvas, img);
+        // Only draw if edge detection is enabled
+        if (isEdgeDetectionEnabled) {
+          drawImageToCanvas(displayCanvas, img);
+        } else {
+          // Clear canvas if edge detection is disabled
+          const ctx = displayCanvas.getContext("2d");
+          if (ctx) {
+            ctx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
+          }
+        }
       };
 
       img.onerror = (e) => {
@@ -135,7 +135,7 @@ export const useCameraEdgeDetection = ({
 
       img.src = `data:image/jpeg;base64,${data.frame}`;
     },
-    [edgeDetectionCanvasRef]
+    [edgeDetectionCanvasRef, isEdgeDetectionEnabled]
   );
 
   // Process a single video frame
@@ -173,13 +173,11 @@ export const useCameraEdgeDetection = ({
       // Capture the frame using the helper function
       const base64Data = captureVideoFrame(video, canvas);
       if (base64Data) {
-        // Extra safety check - never send if peaking is disabled
         if (!isEdgeDetectionEnabled) {
           processingActiveRef.current = false;
           return;
         }
 
-        // Send data in the format expected by the backend
         socket.emit("process_frame", {
           frame: base64Data,
           edge_color: currentEdgeColorRef.current,
@@ -196,28 +194,38 @@ export const useCameraEdgeDetection = ({
   }, [socketRef, videoRef, processDataCanvasRef, isEdgeDetectionEnabled]);
 
   useEffect(() => {
+    // Always clear the canvas when edge detection is disabled
+    if (!isEdgeDetectionEnabled) {
+      // Clear the edge detection canvas immediately
+      const edgeCanvas = edgeDetectionCanvasRef.current;
+      if (edgeCanvas) {
+        const ctx = edgeCanvas.getContext("2d");
+        if (ctx) {
+          ctx.clearRect(0, 0, edgeCanvas.width, edgeCanvas.height);
+        }
+      }
+
+      // Also cancel any pending animation frames
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+
+      // Reset processing state
+      processingActiveRef.current = false;
+      return;
+    }
+
     if (!videoRef?.current || !processDataCanvasRef?.current) {
-      console.log("Video or canvas ref not available");
       return;
     }
 
     const socket = socketRef.current;
     if (!socket) {
-      console.log("Socket not initialized yet");
       return;
     }
 
     const video = videoRef.current;
-
-    if (!isEdgeDetectionEnabled) {
-      setConnectionStatus(socket.connected ? "connected" : "disconnected");
-      // Stop animation frame if it's running
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-      return;
-    }
 
     // Clean up previous listeners first to avoid duplicates
     socket.off("processed_frame", handleProcessedFrame);
@@ -231,12 +239,20 @@ export const useCameraEdgeDetection = ({
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
       }
-      console.log("Starting/restarting processing");
       // Force immediate processing by resetting the active state and time
       processingActiveRef.current = false;
       lastProcessedTimeRef.current = 0;
       // Start the animation frame loop
       processFrame();
+    } else {
+      // Clear the canvas if we're not actively processing
+      const edgeCanvas = edgeDetectionCanvasRef.current;
+      if (edgeCanvas) {
+        const ctx = edgeCanvas.getContext("2d");
+        if (ctx) {
+          ctx.clearRect(0, 0, edgeCanvas.width, edgeCanvas.height);
+        }
+      }
     }
 
     return () => {
