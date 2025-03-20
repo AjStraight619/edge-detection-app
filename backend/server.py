@@ -32,6 +32,11 @@ def process_frame(sid, data):
                 frame_data = data['frame']
                 edge_color = data.get('edge_color', 'red')
                 sensitivity = data.get('sensitivity', 50)  # Default to 50% if not provided
+                source_type = data.get('source_type', 'file')  # Get source type
+                
+                # Adjust processing based on source type
+                # Webcam can handle more detail, uploaded videos need more optimization
+                is_webcam = source_type == 'webcam'
                 
                 # Convert sensitivity to threshold values
                 # Higher sensitivity (higher value) = lower thresholds = more edges
@@ -47,9 +52,33 @@ def process_frame(sid, data):
                 low_threshold = max(10, min(low_threshold, 100))
                 high_threshold = max(low_threshold + 50, min(high_threshold, 255))
                 
+                # Further optimize based on source type
+                if not is_webcam:
+                    # For uploaded videos, reduce edge detection detail to improve performance
+                    low_threshold = int(low_threshold * 1.2)  # Higher threshold = fewer edges
+                    high_threshold = int(high_threshold * 1.2)
+                
                 # Decode the base64 image
                 img_data = base64.b64decode(frame_data)
                 image = np.array(Image.open(BytesIO(img_data)))
+                
+                # For uploaded videos, reduce image size to improve performance
+                if not is_webcam and (image.shape[0] > 720 or image.shape[1] > 1280):
+                    # Calculate new dimensions while preserving aspect ratio
+                    height, width = image.shape[:2]
+                    max_dimension = 720
+                    
+                    # Determine scaling factor
+                    if height > width:
+                        scale = max_dimension / height
+                    else:
+                        scale = max_dimension / width
+                        
+                    new_width = int(width * scale)
+                    new_height = int(height * scale)
+                    
+                    # Resize image to improve performance
+                    image = cv2.resize(image, (new_width, new_height), interpolation=cv2.INTER_AREA)
                 
                 # Keep track of frame numbers for response
                 process_frame.counter = getattr(process_frame, 'counter', 0) + 1
@@ -69,11 +98,17 @@ def process_frame(sid, data):
                 # More precise edge detection with sensitivity-adjusted thresholds
                 edges = cv2.Canny(blurred, low_threshold, high_threshold)
                 
-                # Adjust dilation based on sensitivity
-                kernel_size = 3
-                iterations = 1 if sensitivity > 70 else 2  # Thinner lines at high sensitivity
-                kernel = np.ones((kernel_size, kernel_size), np.uint8)
-                edges = cv2.dilate(edges, kernel, iterations=iterations)
+                # Make lines thinner with smaller kernel and fewer iterations
+                kernel_size = 2  # Reduced from 3 to 2 for thinner lines
+                # Use minimal dilation or none for very thin lines
+                if sensitivity > 80:
+                    # For high sensitivity, just use the raw edges with no dilation
+                    pass  # Skip dilation completely
+                else:
+                    # For lower sensitivity, use minimal dilation
+                    iterations = 1  # Always use just 1 iteration
+                    kernel = np.ones((kernel_size, kernel_size), np.uint8)
+                    edges = cv2.dilate(edges, kernel, iterations=iterations)
                 
                 color_rgb = [255, 0, 0]  # Default: Red in RGB
                 if edge_color == 'green':
@@ -91,8 +126,11 @@ def process_frame(sid, data):
                 result = image.copy()
                 result[edges > 0] = color_rgb
                 
-                # Encode and return the processed image
-                _, buffer = cv2.imencode('.jpg', cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
+                # Encode and return the processed image with appropriate quality
+                # Lower quality for faster transmission when using uploaded videos
+                encode_quality = 70 if is_webcam else 50
+                _, buffer = cv2.imencode('.jpg', cv2.cvtColor(result, cv2.COLOR_RGB2BGR), 
+                                        [cv2.IMWRITE_JPEG_QUALITY, encode_quality])
                 img_str = base64.b64encode(buffer).decode('utf-8')
                 
                 # Send back the frame with frame number
