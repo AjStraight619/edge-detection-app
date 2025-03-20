@@ -29,6 +29,8 @@ type EdgeDetectionContextType = {
   handleVideoSourceChange: (source: string) => void;
   changeVideoSource: (source: VideoSource) => Promise<void>;
   currentSource: VideoSource;
+  isFileUploaded: boolean;
+  setIsFileUploaded: (isFileUploaded: boolean) => void;
 
   isEdgeDetectionEnabled: boolean;
   setEdgeDetectionEnabled: (enabled: boolean) => void;
@@ -67,6 +69,7 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
 
   const processDataCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const edgeDetectionCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [isFileUploaded, setIsFileUploaded] = useState(false);
 
   const [isEdgeDetectionEnabled, setEdgeDetectionEnabled] = useState(false);
   const [sensitivity, setSensitivity] = useState([50]);
@@ -79,69 +82,112 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
     setEdgeDetectionEnabled((prev) => !prev);
   };
 
+  const stopAllMediaTracks = () => {
+    // Stop the webcam in our videoRef
+    const video = videoRef.current;
+    if (video && video.srcObject) {
+      try {
+        const stream = video.srcObject as MediaStream;
+        stream.getTracks().forEach((track) => {
+          track.stop();
+        });
+        video.srcObject = null;
+      } catch (err) {
+        console.error("Error stopping video tracks:", err);
+      }
+    }
+  };
+
   const handleVideoSourceChange = (source: string) => {
-    // If we're currently using webcam and switching to a different source
-    if (videoSource === "webcam" && source !== "webcam") {
-      const video = videoRef.current;
-      if (video) {
-        try {
-          // Stop all tracks in the current stream if it exists
-          if (video.srcObject) {
-            const stream = video.srcObject as MediaStream;
-            stream.getTracks().forEach((track) => {
-              track.stop();
-            });
-            // Clear the srcObject to fully disconnect the camera
-            video.srcObject = null;
-          }
+    const video = videoRef.current;
 
-          // Clear the video element completely
-          video.pause();
-          video.currentTime = 0;
-          video.src = "";
-          video.load(); // Force reload of the video element
+    // Disable edge detection when switching sources to avoid canvas issues
+    if (isEdgeDetectionEnabled && source !== videoSource) {
+      setEdgeDetectionEnabled(false);
+    }
 
-          console.log("Webcam forcibly stopped and video element cleared");
-        } catch (err) {
-          console.error("Error stopping webcam:", err);
+    // Clear all canvases regardless of the source change
+    const clearCanvases = () => {
+      const edgeCanvas = edgeDetectionCanvasRef.current;
+      if (edgeCanvas) {
+        const ctx = edgeCanvas.getContext("2d");
+        if (ctx) {
+          ctx.clearRect(0, 0, edgeCanvas.width, edgeCanvas.height);
         }
+      }
+
+      // Clear the process data canvas
+      const dataCanvas = processDataCanvasRef.current;
+      if (dataCanvas) {
+        const ctx = dataCanvas.getContext("2d");
+        if (ctx) {
+          ctx.clearRect(0, 0, dataCanvas.width, dataCanvas.height);
+        }
+      }
+    };
+
+    if (videoSource === "webcam" && source !== "webcam") {
+      if (video) {
+        pause();
+        stopAllMediaTracks();
+
+        video.currentTime = 0;
+        video.src = "";
+
+        setTimeout(() => {
+          if (video) {
+            video.load();
+          }
+          clearCanvases();
+        }, 0);
       }
     }
 
+    // Set the new video source first
     setVideoSource(source);
 
+    // Now handle the specific source
     if (source === "webcam") {
-      switchToCamera();
+      // Small timeout to ensure previous cleanup has completed
+      setTimeout(() => {
+        switchToCamera();
+      }, 50);
     } else if (source === "sample") {
       switchToFileVideo();
     } else if (source === "upload") {
-      // For upload, just ensure we've cleaned up completely
-      const video = videoRef.current;
       if (video && video.srcObject) {
-        try {
-          const stream = video.srcObject as MediaStream;
-          stream.getTracks().forEach((track) => track.stop());
-          video.srcObject = null;
-          video.src = "";
-          console.log("Cleaned up webcam when switching to upload mode");
-        } catch (err) {
-          console.error("Error cleaning up in upload mode:", err);
-        }
+        stopAllMediaTracks();
+        pause();
+        // Reset video element
+        video.src = "";
+
+        // Force a reload
+        setTimeout(() => {
+          if (video) {
+            video.load();
+          }
+          clearCanvases();
+        }, 0);
+      } else {
+        // Still clear canvases
+        clearCanvases();
       }
 
-      // Only trigger file upload UI if we have no uploaded file
-      if (!uploadedFileUrl) {
-        // This will just change the UI state - actual upload happens with file input
-        console.log("Switching to upload mode without a file");
-      } else {
-        console.log("Switching to upload mode with existing file");
+      // If we have a file URL, reload it after a small delay
+      if (uploadedFileUrl) {
+        setTimeout(() => {
+          if (video && uploadedFileUrl) {
+            video.src = uploadedFileUrl;
+            video.load();
+          }
+        }, 50);
       }
     }
   };
 
   // Switch to camera source
   const switchToCamera = async () => {
-    // First ensure any existing streams are stopped
+    // Ensure any strams are stopped before switching to camera
     const video = videoRef.current;
     if (video && video.srcObject) {
       try {
@@ -170,7 +216,6 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
   };
 
   const switchToFileVideo = () => {
-    // Just show a message since we no longer have a sample video
     alert("Please upload a video file or use your webcam");
     // Reset to upload mode
     setVideoSource("upload");
@@ -178,50 +223,35 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
 
   // Handle uploaded file
   const handleFileUpload = async (file: File): Promise<void> => {
-    // Validate that it's a video file
     if (!file.type.startsWith("video/")) {
       alert("Please upload a valid video file (.mp4)");
       return;
     }
 
-    // Set source to upload explicitly
     setVideoSource("upload");
+    pause();
+    stopAllMediaTracks();
 
-    // AGGRESSIVE cleanup of any webcam streams
-    // First try the videoRef approach
-    const video = videoRef.current;
-    if (video) {
-      // Stop any video that might be playing
-      video.pause();
-
-      // If there's a srcObject (likely a webcam), stop all its tracks
-      if (video.srcObject) {
-        try {
-          const stream = video.srcObject as MediaStream;
-          console.log("Stopping all tracks in current stream");
-          stream.getTracks().forEach((track) => {
-            console.log(`Stopping track: ${track.kind}`);
-            track.stop();
-          });
-          video.srcObject = null;
-        } catch (err) {
-          console.error("Error stopping webcam in handleFileUpload:", err);
+    // Clear all canvases to avoid leaving webcam frames visible
+    const clearCanvases = () => {
+      const edgeCanvas = edgeDetectionCanvasRef.current;
+      if (edgeCanvas) {
+        const ctx = edgeCanvas.getContext("2d");
+        if (ctx) {
+          ctx.clearRect(0, 0, edgeCanvas.width, edgeCanvas.height);
         }
       }
-    }
 
-    // Additional brute-force approach: stop ALL media streams using the browser API
-    try {
-      if (navigator.mediaDevices) {
-        console.log("Attempting to stop all media streams");
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        devices.forEach((device) => {
-          console.log(`Found device: ${device.kind}, ${device.deviceId}`);
-        });
+      const dataCanvas = processDataCanvasRef.current;
+      if (dataCanvas) {
+        const ctx = dataCanvas.getContext("2d");
+        if (ctx) {
+          ctx.clearRect(0, 0, dataCanvas.width, dataCanvas.height);
+        }
       }
-    } catch (e) {
-      console.error("Error enumerating devices:", e);
-    }
+    };
+
+    clearCanvases();
 
     // Clean up previous file URL if it exists
     if (uploadedFileUrl) {
@@ -230,6 +260,9 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
 
     const fileUrl = URL.createObjectURL(file);
     setUploadedFileUrl(fileUrl);
+
+    // Add a small delay before changing source to ensure webcam is fully stopped
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Now change to file source after explicitly stopping the webcam
     try {
@@ -240,6 +273,9 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Error changing source:", error);
     }
+
+    // Small delay before starting playback to allow video element to fully update
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     setEdgeDetectionEnabled(true);
     play();
@@ -280,6 +316,8 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
     switchToCamera,
     switchToFileVideo,
     handleFileUpload,
+    isFileUploaded,
+    setIsFileUploaded,
   };
 
   return (
