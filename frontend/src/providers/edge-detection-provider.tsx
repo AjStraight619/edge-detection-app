@@ -9,6 +9,8 @@ import {
 } from "react";
 import { useVideo, VideoSource } from "@/hooks/use-video";
 
+// TODO: Refactor this into two separate contexts, video-provider and edge-detection
+
 type EdgeDetectionContextType = {
   // Video player state
   videoRef: RefObject<HTMLVideoElement | null>;
