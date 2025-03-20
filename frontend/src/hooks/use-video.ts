@@ -45,6 +45,35 @@ export function useVideo(initialSource?: VideoSource) {
     const video = videoRef.current;
     if (!video) return;
 
+    // Check if there's a pending load operation
+    if (video.readyState < 2) {
+      video.addEventListener(
+        "canplay",
+        function onCanPlay() {
+          video.removeEventListener("canplay", onCanPlay);
+          video
+            .play()
+            .then(() => {
+              setVideoState((prev) => ({ ...prev, isPlaying: true }));
+            })
+            .catch((error) => {
+              // Only log real errors, not aborted play attempts
+              if (error.name !== "AbortError") {
+                console.error("Error playing video:", error);
+                setVideoState((prev) => ({
+                  ...prev,
+                  isPlaying: false,
+                  error: "Failed to play video: " + error.message,
+                }));
+              }
+            });
+        },
+        { once: true }
+      );
+
+      return;
+    }
+
     // Try to play and catch any errors
     const playPromise = video.play();
     if (playPromise !== undefined) {
@@ -53,12 +82,17 @@ export function useVideo(initialSource?: VideoSource) {
           setVideoState((prev) => ({ ...prev, isPlaying: true }));
         })
         .catch((error) => {
-          console.error("Error playing video:", error);
-          setVideoState((prev) => ({
-            ...prev,
-            isPlaying: false,
-            error: "Failed to play video: " + error.message,
-          }));
+          // Handle AbortError separately as it's often just due to a new load request
+          if (error.name === "AbortError") {
+            console.log("Play was aborted, likely due to a new load request");
+          } else {
+            console.error("Error playing video:", error);
+            setVideoState((prev) => ({
+              ...prev,
+              isPlaying: false,
+              error: "Failed to play video: " + error.message,
+            }));
+          }
         });
     }
   }, []);
@@ -118,12 +152,15 @@ export function useVideo(initialSource?: VideoSource) {
       const video = videoRef.current;
       if (!video) return;
 
+      // First, reset the video element to a clean state
+      video.pause();
+      video.currentTime = 0;
+
       // If camera source, set up media stream
       if (newSource.type === "camera") {
         try {
           // Clear any existing src before setting srcObject
-          video.pause();
-          video.src = "";
+          video.removeAttribute("src"); // Safer than setting empty string
           video.srcObject = null;
           video.load();
 
@@ -134,6 +171,9 @@ export function useVideo(initialSource?: VideoSource) {
               facingMode: "environment",
             },
           };
+
+          // Short delay to ensure previous cleanup is complete
+          await new Promise((resolve) => setTimeout(resolve, 50));
 
           const stream = await navigator.mediaDevices.getUserMedia(constraints);
           setMediaStream(stream);
@@ -153,9 +193,12 @@ export function useVideo(initialSource?: VideoSource) {
             function onLoadedData() {
               video.removeEventListener("loadeddata", onLoadedData);
               setTimeout(() => {
-                video
-                  .play()
-                  .catch((err) => console.error("Delayed play error:", err));
+                video.play().catch((err) => {
+                  // Only log if not an abort error
+                  if (err.name !== "AbortError") {
+                    console.error("Delayed play error:", err);
+                  }
+                });
               }, 300);
             },
             { once: true }
@@ -182,9 +225,12 @@ export function useVideo(initialSource?: VideoSource) {
           "loadeddata",
           function onLoadedData() {
             video.removeEventListener("loadeddata", onLoadedData);
-            video
-              .play()
-              .catch((err) => console.error("File video play error:", err));
+            video.play().catch((err) => {
+              // Only log if not an abort error
+              if (err.name !== "AbortError") {
+                console.error("File video play error:", err);
+              }
+            });
           },
           { once: true }
         );
@@ -220,7 +266,6 @@ export function useVideo(initialSource?: VideoSource) {
         isReady: true,
         isLoading: false,
       }));
-      console.log(`Video metadata loaded - Duration: ${video.duration}s`);
     };
 
     const handleTimeUpdate = () => {
@@ -240,12 +285,22 @@ export function useVideo(initialSource?: VideoSource) {
     };
 
     const handleError = (e: Event) => {
-      console.error("Video error:", e);
-      setVideoState((prev) => ({
-        ...prev,
-        error: "Video error: " + (video.error?.message || "Unknown error"),
-        isLoading: false,
-      }));
+      // Only log the error if it's not a cancelation or aborted error when switching sources
+      if (video.error && video.error.code !== 4) {
+        // MEDIA_ERR_SRC_NOT_SUPPORTED when changing sources
+        console.error("Video error:", e);
+        setVideoState((prev) => ({
+          ...prev,
+          error: "Video error: " + (video.error?.message || "Unknown error"),
+          isLoading: false,
+        }));
+      } else {
+        // Silently handle expected errors when changing sources
+        setVideoState((prev) => ({
+          ...prev,
+          isLoading: false,
+        }));
+      }
     };
 
     video.addEventListener("loadstart", handleLoadStart);
