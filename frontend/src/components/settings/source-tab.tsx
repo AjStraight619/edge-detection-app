@@ -96,14 +96,6 @@ export default function SourceTab({
         <div className="space-y-2">
           <Label>Video Source</Label>
           <div className="grid grid-cols-3 gap-2">
-            {/* <Button
-              variant={videoSource === "sample" ? "default" : "outline"}
-              className="w-full"
-              onClick={() => handleVideoSourceChange("sample")}
-            >
-              <Video className="w-4 h-4 mr-2" />
-              Sample
-            </Button> */}
             <Button
               variant={videoSource === "upload" ? "default" : "outline"}
               className="w-full"
@@ -158,18 +150,6 @@ export default function SourceTab({
             </div>
           </div>
         )}
-
-        {/* {videoSource === "sample" && (
-          <div className="space-y-2">
-            <Label>Sample Video</Label>
-            <p className="text-sm text-muted-foreground">
-              This demo uses the default sample video.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Use the Upload button to process your own video or image.
-            </p>
-          </div>
-        )} */}
 
         {videoSource === "upload" && !isUploading && (
           <div className="space-y-2">
