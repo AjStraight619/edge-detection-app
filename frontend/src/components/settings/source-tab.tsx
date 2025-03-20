@@ -1,11 +1,8 @@
-"use client";
-
 import type React from "react";
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Video, Camera, Upload } from "lucide-react";
+import { Video, Camera, Upload, X } from "lucide-react";
 import { useEdgeDetectionContext } from "@/providers/edge-detection-provider";
 import { Progress } from "@/components/ui/progress";
 import { useRef, useState } from "react";
@@ -53,11 +50,12 @@ export default function SourceTab({
 
       // Simulate upload progress
       const trackUploadProgress = async (file: File) => {
-        const chunkSize = file.size / 100;
+        const chunkSize = file.size / 100; // Divide file into 100 chunks for progress
         let uploadedSize = 0;
 
         const processChunk = () => {
           return new Promise<void>((resolve) => {
+            // Simulate network delay based on file size
             const delay = Math.min(50, Math.max(10, file.size / 1000000));
             setTimeout(() => {
               uploadedSize += chunkSize;
@@ -77,6 +75,7 @@ export default function SourceTab({
 
         await handleFileUpload(file);
 
+        // Complete the progress
         setUploadProgress(100);
         setTimeout(() => {
           setIsUploading(false);
@@ -87,12 +86,21 @@ export default function SourceTab({
     }
   };
 
+  function clearUploadedFile() {
+    setUploadedFileName("");
+    setFileSize("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    handleVideoSourceChange("upload");
+  }
+
   return (
     <Card>
       <CardContent className="pt-6 space-y-6">
         <div className="space-y-2">
           <Label>Video Source</Label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <Button
               variant={videoSource === "upload" ? "default" : "outline"}
               className="w-full"
@@ -105,18 +113,12 @@ export default function SourceTab({
               Upload
             </Button>
             <Button
-              variant={videoSource === "webcam" ? "destructive" : "outline"}
+              variant={videoSource === "webcam" ? "default" : "outline"}
               className="w-full"
-              onClick={() => {
-                if (videoSource === "webcam") {
-                  handleVideoSourceChange("upload");
-                } else {
-                  handleVideoSourceChange("webcam");
-                }
-              }}
+              onClick={() => handleVideoSourceChange("webcam")}
             >
               <Camera className="w-4 h-4 mr-2" />
-              {videoSource === "webcam" ? "Stop Webcam" : "Webcam"}
+              Webcam
             </Button>
 
             <input
@@ -124,7 +126,6 @@ export default function SourceTab({
               ref={fileInputRef}
               className="hidden"
               accept="video/mp4"
-              multiple={false}
               onChange={onFileSelected}
             />
           </div>
@@ -152,8 +153,17 @@ export default function SourceTab({
         {videoSource === "upload" && !isUploading && (
           <div className="space-y-2">
             <Label>Uploaded Media</Label>
-            {uploadedFileName && (
-              <div className="p-3 border rounded-md bg-muted/30">
+            {uploadedFileName ? (
+              <div className="p-3 border rounded-md bg-muted/30 relative">
+                <div className="absolute top-0 right-0">
+                  <Button
+                    onClick={clearUploadedFile}
+                    variant="ghost"
+                    size="icon"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
                 <div className="flex items-center gap-2">
                   <Video className="w-4 h-4 text-primary" />
                   <span className="text-sm font-medium">
@@ -164,14 +174,28 @@ export default function SourceTab({
                   {fileSize}
                 </div>
               </div>
+            ) : (
+              <div className="p-4 border rounded-md bg-muted/30 flex flex-col items-center justify-center">
+                <p className="text-sm text-muted-foreground mb-2">
+                  No file selected
+                </p>
+                <Button size="sm" onClick={triggerFileUpload}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Select MP4 File
+                </Button>
+              </div>
             )}
-            <p className="text-sm text-muted-foreground mt-2">
-              Your uploaded media is now being used for edge detection.
-            </p>
-            <Button className="w-full mt-2" onClick={triggerFileUpload}>
-              <Upload className="w-4 h-4 mr-2" />
-              Upload Another File
-            </Button>
+            {uploadedFileName && (
+              <>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Your uploaded media is now being used for edge detection.
+                </p>
+                <Button className="w-full mt-2" onClick={triggerFileUpload}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Another File
+                </Button>
+              </>
+            )}
           </div>
         )}
 
@@ -183,7 +207,7 @@ export default function SourceTab({
               video source.
             </p>
             <Button className="w-full" onClick={switchToCamera}>
-              Restart Webcam
+              Enable Webcam
             </Button>
           </div>
         )}
