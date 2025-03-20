@@ -11,7 +11,20 @@ import { useVideo, VideoSource } from "@/hooks/use-video";
 import { clearCanvas } from "@/lib/utils";
 import { useCameraEdgeDetection } from "@/hooks/use-edge-detection";
 
-// TODO: Refactor this into two separate contexts, video-provider and edge-detection
+/**
+ * TODO: Major refactoring needed
+ *
+ * This provider combines too many responsibilities:
+ * 1. Video playback management
+ * 2. Edge detection state and controls
+ * 3. Video source management (webcam, file uploads)
+ *
+ * Should be split into:
+ * - VideoProvider: handling video sources, playback, and basic controls
+ * - EdgeDetectionProvider: for edge detection settings and processing
+ *
+ * The current implementation is too large and handles too many concerns.
+ */
 
 type EdgeDetectionContextType = {
   // Video player state
@@ -40,7 +53,7 @@ type EdgeDetectionContextType = {
   setEdgeDetectionEnabled: (enabled: boolean) => void;
   toggleEdgeDetection: () => void;
 
-  // TODO: Integrate sensitivity controls
+  // Sensitivity controls for edge detection
   sensitivity: number[];
   setSensitivity: (sensitivity: number[]) => void;
 
