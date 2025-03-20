@@ -140,16 +140,23 @@ export const useCameraEdgeDetection = ({
     const video = videoRef.current;
     const canvas = processDataCanvasRef.current;
 
+    // Debug info: check if video source is webcam or file
+    const isWebcam = !!video.srcObject;
+
     // Only send frames for processing when connected and not already processing
     const now = Date.now();
     const shouldProcess =
       socket.connected &&
       !processingActiveRef.current &&
       !video.paused &&
-      // TODO: Integrate FPS control
-      now - lastProcessedTimeRef.current > FRAME_INTERVAL_MS;
+      // Use different frame rates for webcam vs uploaded videos
+      // Uploaded videos need more time between frames
+      now - lastProcessedTimeRef.current >
+        (isWebcam ? FRAME_INTERVAL_MS : FRAME_INTERVAL_MS * 2);
 
     if (shouldProcess) {
+      // console.log(`Processing frame - source: ${isWebcam ? 'webcam' : 'uploaded video'}`);
+
       processingActiveRef.current = true;
       lastProcessedTimeRef.current = now;
       frameCountRef.current++;
@@ -166,6 +173,7 @@ export const useCameraEdgeDetection = ({
           frame: base64Data,
           edge_color: currentEdgeColorRef.current,
           sensitivity: currentSensitivityRef.current,
+          source_type: isWebcam ? "webcam" : "file", // Tell the server what type of source
         });
       } else {
         processingActiveRef.current = false;
