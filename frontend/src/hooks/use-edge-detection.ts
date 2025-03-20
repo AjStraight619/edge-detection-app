@@ -3,7 +3,7 @@ import { useWebSocket } from "./use-websocket";
 import { FRAME_INTERVAL_MS } from "@/lib/constants";
 import { drawImageToCanvas, clearCanvas } from "@/lib/utils";
 
-type UseFocusPeakingProps = {
+type UseEdgeDetectionProps = {
   videoRef: RefObject<HTMLVideoElement | null>;
   processDataCanvasRef: RefObject<HTMLCanvasElement | null>;
   edgeDetectionCanvasRef: RefObject<HTMLCanvasElement | null>;
@@ -61,8 +61,7 @@ export const useCameraEdgeDetection = ({
   isPlaying,
   edgeColor,
   sensitivity = [50],
-}: UseFocusPeakingProps) => {
-  // Use the websocket hook
+}: UseEdgeDetectionProps) => {
   const { socketRef, connectionStatus, setConnectionStatus } = useWebSocket();
 
   const animationFrameRef = useRef<number | null>(null);
