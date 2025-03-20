@@ -91,12 +91,13 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
             stream.getTracks().forEach((track) => {
               track.stop();
             });
+            // Clear the srcObject to fully disconnect the camera
+            video.srcObject = null;
           }
 
           // Clear the video element completely
           video.pause();
           video.currentTime = 0;
-          video.srcObject = null;
           video.src = "";
           video.load(); // Force reload of the video element
 
@@ -113,8 +114,29 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
       switchToCamera();
     } else if (source === "sample") {
       switchToFileVideo();
+    } else if (source === "upload") {
+      // For upload, just ensure we've cleaned up completely
+      const video = videoRef.current;
+      if (video && video.srcObject) {
+        try {
+          const stream = video.srcObject as MediaStream;
+          stream.getTracks().forEach((track) => track.stop());
+          video.srcObject = null;
+          video.src = "";
+          console.log("Cleaned up webcam when switching to upload mode");
+        } catch (err) {
+          console.error("Error cleaning up in upload mode:", err);
+        }
+      }
+
+      // Only trigger file upload UI if we have no uploaded file
+      if (!uploadedFileUrl) {
+        // This will just change the UI state - actual upload happens with file input
+        console.log("Switching to upload mode without a file");
+      } else {
+        console.log("Switching to upload mode with existing file");
+      }
     }
-    // Upload is handled by the file input change handler
   };
 
   // Switch to camera source
