@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { COLOR_OPTIONS } from "@/lib/constants";
 
 type SettingsTabProps = {
   isEdgeDetectionEnabled: boolean;
@@ -11,6 +12,8 @@ type SettingsTabProps = {
   edgeColor: string;
   setEdgeColor: (color: string) => void;
 };
+
+// TODO: Add sensitivity slider
 
 export default function SettingsTab({
   isEdgeDetectionEnabled,
@@ -57,34 +60,42 @@ export default function SettingsTab({
           <div className="space-y-2">
             <Label>Edge Color</Label>
             <div className="grid grid-cols-3 gap-2">
-              <Button
-                variant={edgeColor === "red" ? "default" : "outline"}
-                className="w-full"
-                onClick={() => setEdgeColor("red")}
-              >
-                <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
-                Red
-              </Button>
-              <Button
-                variant={edgeColor === "blue" ? "default" : "outline"}
-                className="w-full"
-                onClick={() => setEdgeColor("blue")}
-              >
-                <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
-                Blue
-              </Button>
-              <Button
-                variant={edgeColor === "yellow" ? "default" : "outline"}
-                className="w-full"
-                onClick={() => setEdgeColor("yellow")}
-              >
-                <div className="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
-                Yellow
-              </Button>
+              {COLOR_OPTIONS.map((color) => (
+                <ColorButton
+                  key={color}
+                  edgeColor={edgeColor}
+                  color={color}
+                  onClick={() => setEdgeColor(color)}
+                />
+              ))}
             </div>
           </div>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function ColorButton({
+  color,
+  edgeColor,
+  onClick,
+}: {
+  color: string;
+  edgeColor: string;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      variant={color === edgeColor ? "default" : "outline"}
+      className="w-full"
+      onClick={onClick}
+    >
+      <div
+        style={{ backgroundColor: color }}
+        className="w-3 h-3 rounded-full mr-2"
+      ></div>
+      {color.charAt(0).toUpperCase() + color.slice(1)}
+    </Button>
   );
 }

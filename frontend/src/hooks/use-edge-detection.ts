@@ -1,5 +1,6 @@
 import { useEffect, type RefObject, useRef, useCallback } from "react";
 import { useWebSocket } from "./use-websocket";
+import { FRAME_INTERVAL_MS } from "@/lib/constants";
 
 type UseFocusPeakingProps = {
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -163,7 +164,7 @@ export const useCameraEdgeDetection = ({
       !processingActiveRef.current &&
       !video.paused &&
       // TODO: Integrate FPS control
-      now - lastProcessedTimeRef.current > 20;
+      now - lastProcessedTimeRef.current > FRAME_INTERVAL_MS;
 
     if (shouldProcess) {
       processingActiveRef.current = true;
