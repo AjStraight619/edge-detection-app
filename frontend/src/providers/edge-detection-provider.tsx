@@ -8,23 +8,10 @@ import {
   useEffect,
 } from "react";
 import { useVideo, VideoSource } from "@/hooks/use-video";
-import { clearCanvas } from "@/lib/utils";
+import { clearCanvases } from "@/lib/utils";
 import { useCameraEdgeDetection } from "@/hooks/use-edge-detection";
 
-/**
- * TODO: Major refactoring needed
- *
- * This provider combines too many responsibilities:
- * 1. Video playback management
- * 2. Edge detection state and controls
- * 3. Video source management (webcam, file uploads)
- *
- * Should be split into:
- * - VideoProvider: handling video sources, playback, and basic controls
- * - EdgeDetectionProvider: for edge detection settings and processing
- *
- * The current implementation is too large and handles too many concerns.
- */
+// TODO: Refactor this into two separate contexts, video-provider and edge-detection
 
 type EdgeDetectionContextType = {
   // Video player state
@@ -53,7 +40,6 @@ type EdgeDetectionContextType = {
   setEdgeDetectionEnabled: (enabled: boolean) => void;
   toggleEdgeDetection: () => void;
 
-  // Sensitivity controls for edge detection
   sensitivity: number[];
   setSensitivity: (sensitivity: number[]) => void;
 
@@ -61,7 +47,6 @@ type EdgeDetectionContextType = {
   setEdgeColor: (color: string) => void;
 
   switchToCamera: () => Promise<void>;
-  switchToFileVideo: () => void;
   handleFileUpload: (file: File) => Promise<void>;
 
   // WebSocket status
@@ -118,19 +103,60 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const handleSource = (
+    source: string,
+    video: HTMLVideoElement,
+    edgeDetectionCanvas: HTMLCanvasElement,
+    processDataCanvas: HTMLCanvasElement
+  ) => {
+    if (source === "webcam") {
+      // Small timeout to ensure previous cleanup has completed
+      setTimeout(() => {
+        switchToCamera();
+      }, 50);
+    } else {
+      if (video && video.srcObject) {
+        stopAllMediaTracks();
+        pause();
+        // Reset video element
+        video.src = "";
+
+        // Force a reload
+        setTimeout(() => {
+          if (video) {
+            video.load();
+          }
+          clearCanvases(edgeDetectionCanvas, processDataCanvas);
+        }, 0);
+      } else {
+        // Still clear canvases
+        clearCanvases(edgeDetectionCanvas, processDataCanvas);
+      }
+
+      // If we have a file URL, reload it after a small delay
+      if (uploadedFileUrl) {
+        setTimeout(() => {
+          if (video && uploadedFileUrl) {
+            video.src = uploadedFileUrl;
+            video.load();
+          }
+        }, 50);
+      }
+    }
+  };
+
   const handleVideoSourceChange = (source: string) => {
     const video = videoRef.current;
+    const edgeDetectionCanvas = edgeDetectionCanvasRef.current;
+    const processDataCanvas = processDataCanvasRef.current;
 
+    if (!edgeDetectionCanvas || !processDataCanvas || !video) return;
     // Disable edge detection when switching sources to avoid canvas issues
     if (isEdgeDetectionEnabled && source !== videoSource) {
       setEdgeDetectionEnabled(false);
     }
 
-    // Clear all canvases regardless of the source change
-    const clearCanvases = () => {
-      clearCanvas(edgeDetectionCanvasRef.current);
-      clearCanvas(processDataCanvasRef.current);
-    };
+    clearCanvases(edgeDetectionCanvas, processDataCanvas);
 
     if (videoSource === "webcam" && source !== "webcam") {
       if (video) {
@@ -144,51 +170,14 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
           if (video) {
             video.load();
           }
-          clearCanvases();
+          clearCanvases(edgeDetectionCanvas, processDataCanvas);
         }, 0);
       }
     }
 
-    // Set the new video source first
     setVideoSource(source);
 
-    // Now handle the specific source
-    if (source === "webcam") {
-      // Small timeout to ensure previous cleanup has completed
-      setTimeout(() => {
-        switchToCamera();
-      }, 50);
-    } else if (source === "sample") {
-      switchToFileVideo();
-    } else if (source === "upload") {
-      if (video && video.srcObject) {
-        stopAllMediaTracks();
-        pause();
-        // Reset video element
-        video.src = "";
-
-        // Force a reload
-        setTimeout(() => {
-          if (video) {
-            video.load();
-          }
-          clearCanvases();
-        }, 0);
-      } else {
-        // Still clear canvases
-        clearCanvases();
-      }
-
-      // If we have a file URL, reload it after a small delay
-      if (uploadedFileUrl) {
-        setTimeout(() => {
-          if (video && uploadedFileUrl) {
-            video.src = uploadedFileUrl;
-            video.load();
-          }
-        }, 50);
-      }
-    }
+    handleSource(source, video, edgeDetectionCanvas, processDataCanvas);
   };
 
   // Switch to camera source
@@ -221,12 +210,6 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
     play();
   };
 
-  const switchToFileVideo = () => {
-    alert("Please upload a video file or use your webcam");
-    // Reset to upload mode
-    setVideoSource("upload");
-  };
-
   // Handle uploaded file
   const handleFileUpload = async (file: File): Promise<void> => {
     if (!file.type.startsWith("video/")) {
@@ -239,12 +222,13 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
     stopAllMediaTracks();
 
     // Clear all canvases to avoid leaving webcam frames visible
-    const clearCanvases = () => {
-      clearCanvas(edgeDetectionCanvasRef.current);
-      clearCanvas(processDataCanvasRef.current);
-    };
 
-    clearCanvases();
+    const edgeDetectionCanvas = edgeDetectionCanvasRef.current;
+    const processDataCanvas = processDataCanvasRef.current;
+
+    if (!edgeDetectionCanvas || !processDataCanvas) return;
+
+    clearCanvases(edgeDetectionCanvas, processDataCanvas);
 
     // Clean up previous file URL if it exists
     if (uploadedFileUrl) {
@@ -282,7 +266,6 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
     };
   }, [uploadedFileUrl]);
 
-  // TODO: Implement edge detection using a separate hook
   const { connectionStatus } = useCameraEdgeDetection({
     videoRef,
     processDataCanvasRef,
@@ -318,7 +301,6 @@ export function EdgeDetectionProvider({ children }: { children: ReactNode }) {
     edgeColor,
     setEdgeColor,
     switchToCamera,
-    switchToFileVideo,
     handleFileUpload,
     isFileUploaded,
     setIsFileUploaded,

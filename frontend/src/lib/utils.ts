@@ -56,3 +56,11 @@ export const formatTime = (timeInSeconds: number): string => {
     .toString()
     .padStart(2, "0")}`;
 };
+
+export const clearCanvases = (
+  edgeDetectionCanvas: HTMLCanvasElement,
+  processDataCanvas: HTMLCanvasElement
+) => {
+  clearCanvas(edgeDetectionCanvas);
+  clearCanvas(processDataCanvas);
+};
