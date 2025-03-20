@@ -1,6 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Eye, EyeOff, Pause, Play, RefreshCw, Settings } from "lucide-react";
+import {
+  CircleDot,
+  Eye,
+  EyeOff,
+  Pause,
+  Play,
+  RefreshCw,
+  Settings,
+} from "lucide-react";
 import EdgeDetectionOverlay from "@/components/video/edge-detection-overlay";
 import RawVideo from "@/components/video/raw-video";
 import { useEdgeDetectionContext } from "@/providers/edge-detection-provider";
@@ -141,34 +149,39 @@ function VideoControls({
   onOpenControls,
   isMobile,
 }: VideoControlsProps) {
+  const isLiveWebcam = currentSource === "camera";
+
   return (
     <>
       <div className="absolute bottom-14 left-4 right-4 h-1 bg-gray-700 rounded-full overflow-hidden z-50">
         <div
           className="h-full bg-primary"
           style={{
-            width: `${
-              currentSource === "camera" ? 100 : (currentTime / duration) * 100
-            }%`,
+            width: `${isLiveWebcam ? 100 : (currentTime / duration) * 100}%`,
           }}
         />
       </div>
 
       <div className="absolute bottom-4 left-4 right-4 flex items-center gap-2 z-50">
-        <PlayPauseButton
-          isPlaying={isPlaying}
-          togglePlayPause={togglePlayPause}
-        />
-
-        <Button variant="secondary" size="icon" onClick={resetVideo}>
-          <RefreshCw className="w-5 h-5" />
-        </Button>
-
-        <div className="text-xs text-white bg-black/50 px-2 py-1 rounded">
-          {currentSource === "camera"
-            ? "LIVE"
-            : `${formatTime(currentTime)} / ${formatTime(duration)}`}
-        </div>
+        {isLiveWebcam ? (
+          <div className="flex items-center gap-2 text-xs text-white bg-black/50 px-3 py-2 rounded">
+            <div className="h-2 w-2 rounded-full bg-red-500" />
+            <span>LIVE</span>
+          </div>
+        ) : (
+          <>
+            <PlayPauseButton
+              isPlaying={isPlaying}
+              togglePlayPause={togglePlayPause}
+            />
+            <Button variant="secondary" size="icon" onClick={resetVideo}>
+              <RefreshCw className="w-5 h-5" />
+            </Button>
+            <div className="text-xs text-white bg-black/50 px-2 py-1 rounded">
+              {`${formatTime(currentTime)} / ${formatTime(duration)}`}
+            </div>
+          </>
+        )}
 
         <div className="ml-auto flex items-center gap-2">
           {/* Edge detection toggle */}
