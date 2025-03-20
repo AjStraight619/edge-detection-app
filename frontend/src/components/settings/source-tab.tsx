@@ -71,15 +71,12 @@ export default function SourceTab({
           });
         };
 
-        // Process chunks sequentially to simulate upload
         for (let i = 0; i < 95; i++) {
           await processChunk();
         }
 
-        // Now call the actual file upload handler
         await handleFileUpload(file);
 
-        // Complete the progress
         setUploadProgress(100);
         setTimeout(() => {
           setIsUploading(false);
@@ -127,6 +124,7 @@ export default function SourceTab({
               ref={fileInputRef}
               className="hidden"
               accept="video/mp4"
+              multiple={false}
               onChange={onFileSelected}
             />
           </div>
