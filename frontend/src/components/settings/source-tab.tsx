@@ -16,7 +16,8 @@ export default function SourceTab({
   videoSource,
   handleVideoSourceChange,
 }: SourceTabProps) {
-  const { switchToCamera, handleFileUpload } = useEdgeDetectionContext();
+  const { switchToCamera, handleFileUpload, setIsFileUploaded } =
+    useEdgeDetectionContext();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
@@ -34,6 +35,7 @@ export default function SourceTab({
   };
 
   const onFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsFileUploaded(false);
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
 
@@ -75,6 +77,8 @@ export default function SourceTab({
 
         await handleFileUpload(file);
 
+        setIsFileUploaded(true);
+
         // Complete the progress
         setUploadProgress(100);
         setTimeout(() => {
@@ -113,12 +117,18 @@ export default function SourceTab({
               Upload
             </Button>
             <Button
-              variant={videoSource === "webcam" ? "default" : "outline"}
+              variant={videoSource === "webcam" ? "destructive" : "outline"}
               className="w-full"
-              onClick={() => handleVideoSourceChange("webcam")}
+              onClick={() => {
+                if (videoSource === "webcam") {
+                  handleVideoSourceChange("upload");
+                } else {
+                  handleVideoSourceChange("webcam");
+                }
+              }}
             >
               <Camera className="w-4 h-4 mr-2" />
-              Webcam
+              {videoSource === "webcam" ? "Stop Webcam" : "Webcam"}
             </Button>
 
             <input
@@ -207,7 +217,7 @@ export default function SourceTab({
               video source.
             </p>
             <Button className="w-full" onClick={switchToCamera}>
-              Enable Webcam
+              Restart Webcam
             </Button>
           </div>
         )}
