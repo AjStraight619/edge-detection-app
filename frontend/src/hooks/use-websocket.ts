@@ -1,62 +1,63 @@
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
+// Singleton socket instance
+let globalSocketInstance: Socket | null = null;
+
 export function useWebSocket(url: string = "http://localhost:8000") {
   const [connectionStatus, setConnectionStatus] =
     useState<string>("disconnected");
   const socketRef = useRef<Socket | null>(null);
 
+  // Setup socket connection
   useEffect(() => {
-    // Only create the socket once
-    if (!socketRef.current) {
-      console.log("Creating new socket connection");
-      const socket = io(url, {
+    // If we already have a global socket instance, reuse it
+    if (!globalSocketInstance) {
+      // Create a single shared socket instance
+      globalSocketInstance = io(url, {
         reconnectionAttempts: 5,
         timeout: 10000,
         transports: ["websocket", "polling"],
-        forceNew: true,
-      });
-
-      socketRef.current = socket;
-
-      // Set up persistent socket event handlers
-      socket.on("connect", () => {
-        console.log("Connected to server!");
-        setConnectionStatus("connected");
-
-        // Listen for errors
-        socket.on("error", (data) => {
-          console.error("Server error:", data);
-        });
-      });
-
-      socket.on("connect_error", (err) => {
-        console.error("Connection error:", err);
-        setConnectionStatus("error: " + err.message);
-      });
-
-      socket.on("disconnect", () => {
-        console.log("Disconnected from server");
-        setConnectionStatus("disconnected");
-      });
-
-      // Handle errors from server
-      socket.on("error", (error) => {
-        console.error("Server error:", error);
-        setConnectionStatus("server error");
+        forceNew: false, // Reuse connection
+        reconnection: true,
       });
     }
-  }, [url]);
 
-  useEffect(() => {
+    socketRef.current = globalSocketInstance;
+
+    // Set up component-specific handlers for status updates
+    const onConnect = () => {
+      setConnectionStatus("connected");
+    };
+
+    const onConnectError = (err: Error) => {
+      setConnectionStatus("error: " + err.message);
+    };
+
+    const onDisconnect = () => {
+      setConnectionStatus("disconnected");
+    };
+
+    // Check initial connection state
+    if (socketRef.current.connected) {
+      setConnectionStatus("connected");
+    } else {
+      setConnectionStatus("disconnected");
+    }
+
+    // Register component-specific listeners
+    socketRef.current.on("connect", onConnect);
+    socketRef.current.on("connect_error", onConnectError);
+    socketRef.current.on("disconnect", onDisconnect);
+
     return () => {
       if (socketRef.current) {
-        console.log("Component unmounting - disconnecting socket");
-        socketRef.current.disconnect();
-        socketRef.current = null;
+        socketRef.current.off("connect", onConnect);
+        socketRef.current.off("connect_error", onConnectError);
+        socketRef.current.off("disconnect", onDisconnect);
       }
     };
-  }, []);
+  }, [url]);
 
   return {
     socketRef,
