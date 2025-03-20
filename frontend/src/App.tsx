@@ -1,6 +1,5 @@
 import VideoPlayer from "@/components/video/video-player";
 import Controls from "@/components/settings/controls";
-import { EdgeDetectionProvider } from "@/providers/edge-detection-provider";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useState } from "react";
 
@@ -17,30 +16,28 @@ export default function EdgeDetectionApp() {
   const isMobile = useMediaQuery("(max-width: 1023px)");
 
   return (
-    <EdgeDetectionProvider>
-      <div className="container mx-auto py-4 px-4 md:py-8 relative min-h-screen">
-        <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6 text-center sm:text-left">
-          Focus Peaking
-        </h1>
+    <div className="container mx-auto py-4 px-4 md:py-8 relative min-h-screen">
+      <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6 text-center sm:text-left">
+        Focus Peaking
+      </h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <VideoPlayer onOpenControls={() => setIsControlsOpen(true)} />
-          </div>
-
-          {isMobile ? (
-            <MobileControls
-              isOpen={isControlsOpen}
-              onOpenChange={setIsControlsOpen}
-            />
-          ) : (
-            <div className="lg:sticky lg:top-4">
-              <Controls />
-            </div>
-          )}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <VideoPlayer onOpenControls={() => setIsControlsOpen(true)} />
         </div>
+
+        {isMobile ? (
+          <MobileControls
+            isOpen={isControlsOpen}
+            onOpenChange={setIsControlsOpen}
+          />
+        ) : (
+          <div className="lg:sticky lg:top-4">
+            <Controls />
+          </div>
+        )}
       </div>
-    </EdgeDetectionProvider>
+    </div>
   );
 }
 
