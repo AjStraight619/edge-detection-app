@@ -3,21 +3,22 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Video, Camera, Upload, X } from "lucide-react";
-import { useEdgeDetectionContext } from "@/providers/edge-detection-provider";
 import { Progress } from "@/components/ui/progress";
 import { useRef, useState } from "react";
 
 type SourceTabProps = {
   videoSource: string;
   handleVideoSourceChange: (source: string) => void;
+  handleFileUpload: (file: File) => Promise<void>;
+  stopWebcam: () => void;
 };
 
 export default function SourceTab({
   videoSource,
   handleVideoSourceChange,
+  handleFileUpload,
+  stopWebcam,
 }: SourceTabProps) {
-  const { switchToCamera, handleFileUpload, setIsFileUploaded } =
-    useEdgeDetectionContext();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
@@ -35,7 +36,6 @@ export default function SourceTab({
   };
 
   const onFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    setIsFileUploaded(false);
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
 
@@ -43,6 +43,11 @@ export default function SourceTab({
       if (!file.type.includes("video/mp4")) {
         alert("Please select an MP4 video file.");
         return;
+      }
+
+      // If webcam is active, stop it first
+      if (videoSource === "webcam") {
+        stopWebcam();
       }
 
       setIsUploading(true);
@@ -77,8 +82,6 @@ export default function SourceTab({
 
         await handleFileUpload(file);
 
-        setIsFileUploaded(true);
-
         // Complete the progress
         setUploadProgress(100);
         setTimeout(() => {
@@ -109,6 +112,10 @@ export default function SourceTab({
               variant={videoSource === "upload" ? "default" : "outline"}
               className="w-full"
               onClick={() => {
+                // If webcam is active, explicitly stop it
+                if (videoSource === "webcam") {
+                  stopWebcam();
+                }
                 handleVideoSourceChange("upload");
                 triggerFileUpload();
               }}
@@ -121,6 +128,8 @@ export default function SourceTab({
               className="w-full"
               onClick={() => {
                 if (videoSource === "webcam") {
+                  // Explicitly stop webcam when clicking stop
+                  stopWebcam();
                   handleVideoSourceChange("upload");
                 } else {
                   handleVideoSourceChange("webcam");
@@ -216,7 +225,10 @@ export default function SourceTab({
               Please allow camera access when prompted to use your webcam as the
               video source.
             </p>
-            <Button className="w-full" onClick={switchToCamera}>
+            <Button
+              className="w-full"
+              onClick={() => handleVideoSourceChange("webcam")}
+            >
               Restart Webcam
             </Button>
           </div>

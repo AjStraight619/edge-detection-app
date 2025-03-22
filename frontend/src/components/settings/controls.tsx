@@ -1,20 +1,47 @@
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, Video } from "lucide-react";
 import SettingsTab from "@/components/settings/settings-tab";
 import SourceTab from "@/components/settings/source-tab";
-import { useEdgeDetectionContext } from "@/providers/edge-detection-provider";
+import { useVideo } from "@/providers/video-provider";
+import { useSettings } from "@/providers/settings-provider";
 
 export default function Controls() {
   const {
+    currentSource,
+    switchToCamera,
+    stopCamera: stopWebcam,
+    uploadFile,
+  } = useVideo();
+
+  const {
     isEdgeDetectionEnabled,
-    setEdgeDetectionEnabled,
+    setIsEdgeDetectionEnabled,
     sensitivity,
     setSensitivity,
     edgeColor,
     setEdgeColor,
-    videoSource,
-    handleVideoSourceChange,
-  } = useEdgeDetectionContext();
+  } = useSettings();
+
+  // For UI display, we use a simpler source type string
+  const [videoSource, setVideoSource] = useState<string>(
+    currentSource.type === "camera" ? "webcam" : "upload"
+  );
+
+  // Keep videoSource in sync with currentSource
+  useEffect(() => {
+    setVideoSource(currentSource.type === "camera" ? "webcam" : "upload");
+  }, [currentSource]);
+
+  const handleVideoSourceChange = (source: string) => {
+    setVideoSource(source);
+    if (source === "webcam") {
+      switchToCamera();
+    } else if (source === "upload" && videoSource === "webcam") {
+      // Stop webcam when switching from webcam to upload
+      stopWebcam();
+    }
+  };
 
   return (
     <Tabs defaultValue="source">
@@ -33,13 +60,15 @@ export default function Controls() {
         <SourceTab
           videoSource={videoSource}
           handleVideoSourceChange={handleVideoSourceChange}
+          handleFileUpload={uploadFile}
+          stopWebcam={stopWebcam}
         />
       </TabsContent>
 
       <TabsContent value="settings">
         <SettingsTab
           isEdgeDetectionEnabled={isEdgeDetectionEnabled}
-          setEdgeDetectionEnabled={setEdgeDetectionEnabled}
+          setEdgeDetectionEnabled={setIsEdgeDetectionEnabled}
           sensitivity={sensitivity}
           setSensitivity={setSensitivity}
           edgeColor={edgeColor}

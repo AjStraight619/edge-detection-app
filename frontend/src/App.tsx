@@ -1,4 +1,4 @@
-import VideoPlayer from "@/components/video/video-player";
+import { VideoPlayer } from "@/components/video/video-player";
 import Controls from "@/components/settings/controls";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useState } from "react";

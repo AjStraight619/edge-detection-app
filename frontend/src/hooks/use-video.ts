@@ -255,6 +255,10 @@ export function useVideo(initialSource?: VideoSource) {
     const video = videoRef.current;
     if (!video) return;
 
+    const controller = new AbortController();
+
+    const { signal } = controller;
+
     const handleLoadStart = () => {
       setVideoState((prev) => ({ ...prev, isLoading: true, isReady: false }));
     };
@@ -303,13 +307,13 @@ export function useVideo(initialSource?: VideoSource) {
       }
     };
 
-    video.addEventListener("loadstart", handleLoadStart);
-    video.addEventListener("loadedmetadata", handleLoadedMetadata);
-    video.addEventListener("timeupdate", handleTimeUpdate);
-    video.addEventListener("play", handlePlay);
-    video.addEventListener("pause", handlePause);
-    video.addEventListener("ended", handleEnded);
-    video.addEventListener("error", handleError);
+    video.addEventListener("loadstart", handleLoadStart, { signal });
+    video.addEventListener("loadedmetadata", handleLoadedMetadata, { signal });
+    video.addEventListener("timeupdate", handleTimeUpdate, { signal });
+    video.addEventListener("play", handlePlay, { signal });
+    video.addEventListener("pause", handlePause, { signal });
+    video.addEventListener("ended", handleEnded, { signal });
+    video.addEventListener("error", handleError, { signal });
 
     // If video is already loaded, set duration immediately
     if (video.readyState >= 2) {
@@ -331,13 +335,7 @@ export function useVideo(initialSource?: VideoSource) {
     }
 
     return () => {
-      video.removeEventListener("loadstart", handleLoadStart);
-      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
-      video.removeEventListener("timeupdate", handleTimeUpdate);
-      video.removeEventListener("play", handlePlay);
-      video.removeEventListener("pause", handlePause);
-      video.removeEventListener("ended", handleEnded);
-      video.removeEventListener("error", handleError);
+      controller.abort();
 
       // Clean up media stream if component unmounts
       if (mediaStream) {
