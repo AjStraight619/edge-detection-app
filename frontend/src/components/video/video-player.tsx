@@ -1,42 +1,101 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  CircleDot,
-  Eye,
-  EyeOff,
-  Pause,
-  Play,
-  RefreshCw,
-  Settings,
-} from "lucide-react";
-import EdgeDetectionOverlay from "@/components/video/edge-detection-overlay";
-import RawVideo from "@/components/video/raw-video";
-import { useEdgeDetectionContext } from "@/providers/edge-detection-provider";
+import { Eye, EyeOff, Pause, Play, RefreshCw, Settings } from "lucide-react";
+import { useVideo } from "@/providers/video-provider";
+import { useSettings } from "@/providers/settings-provider";
+import { EdgeDetectionOverlay } from "./edge-detection-overlay";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { formatTime } from "@/providers/video-provider";
 
-type VideoPlayerProps = {
+export function VideoPlayer({
+  onOpenControls,
+}: {
   onOpenControls?: () => void;
-};
-
-export default function VideoPlayer({ onOpenControls }: VideoPlayerProps) {
+}) {
   const {
     videoRef,
-    processDataCanvasRef,
-    edgeDetectionCanvasRef,
-    isPlaying,
-    isEdgeDetectionEnabled,
-    edgeColor,
-    duration,
     currentTime,
-    formatTime,
-    toggle,
+    duration,
     reset,
+    toggle,
     currentSource,
-    toggleEdgeDetection,
-  } = useEdgeDetectionContext();
+    isPlaying,
+    play,
+  } = useVideo();
+
+  const { isEdgeDetectionEnabled, setIsEdgeDetectionEnabled } = useSettings();
 
   const isMobile = useMediaQuery("(max-width: 1023px)");
 
+  // Video source URL based on currentSource
+  const videoSrc =
+    currentSource.type === "file" && currentSource.url
+      ? currentSource.url
+      : undefined;
+
+  // Toggle edge detection
+  const toggleEdgeDetection = () => {
+    setIsEdgeDetectionEnabled(!isEdgeDetectionEnabled);
+  };
+
+  // Keep isPlaying state in sync with video
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    // Force play for webcam sources
+    if (currentSource.type === "camera" && !isPlaying) {
+      if (process.env.NODE_ENV === "development") {
+        console.log("[Debug] Forcing webcam to play state");
+      }
+      play();
+    }
+
+    // Play the video when loaded for file sources
+    const handleCanPlay = () => {
+      if (currentSource.type === "file" && video.paused) {
+        play();
+      }
+    };
+
+    // Add debug log for webcam sources
+    if (currentSource.type === "camera") {
+      // For webcam, we need to ensure it starts playing immediately
+      if (video.paused) {
+        if (process.env.NODE_ENV === "development") {
+          console.log("[Debug] Auto-playing webcam source");
+        }
+        // Add a small delay before auto-playing to prevent race conditions
+        setTimeout(() => {
+          // Check if the component is still mounted and video still needs to play
+          if (video && video.paused && currentSource.type === "camera") {
+            video.play().catch((err) => {
+              // Ignore AbortError as it's usually due to component lifecycle
+              if (err.name !== "AbortError") {
+                console.error("Failed to auto-play webcam:", err);
+              }
+            });
+          }
+        }, 300);
+      }
+    }
+
+    video.addEventListener("canplay", handleCanPlay);
+
+    // Debug the isPlaying state for the current source
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        `[Debug] Video state: isPlaying=${isPlaying}, source=${currentSource.type}, paused=${video.paused}, readyState=${video.readyState}`
+      );
+    }
+
+    return () => {
+      video.removeEventListener("canplay", handleCanPlay);
+    };
+  }, [videoRef, currentSource, play, isPlaying]);
+
+  // Check if we have a loaded video
   const hasLoadedVideo =
     (currentSource.type === "file" && !!currentSource.url) ||
     (currentSource.type === "camera" && videoRef.current?.srcObject !== null);
@@ -47,27 +106,19 @@ export default function VideoPlayer({ onOpenControls }: VideoPlayerProps) {
     <Card className="w-full overflow-hidden">
       <CardContent className="p-0 relative">
         <div className="relative aspect-video bg-black">
-          <canvas
-            ref={processDataCanvasRef}
-            style={{ display: "none" }}
-            width="640"
-            height="480"
-          />
-          <RawVideo
-            videoRef={videoRef}
-            isEdgeDetectionEnabled={isEdgeDetectionEnabled}
+          {/* Main video element */}
+          <video
+            ref={videoRef}
+            {...(videoSrc ? { src: videoSrc } : {})}
+            className="w-full h-full object-contain"
+            onClick={toggle}
+            playsInline
           />
 
-          <div style={{ display: isEdgeDetectionEnabled ? "block" : "none" }}>
-            <EdgeDetectionOverlay
-              videoRef={videoRef}
-              processDataCanvasRef={processDataCanvasRef}
-              edgeDetectionCanvasRef={edgeDetectionCanvasRef}
-              isPlaying={isPlaying}
-              edgeColor={edgeColor}
-            />
-          </div>
+          {/* CRITICAL: Always mount the overlay but conditionally show it. This prevents re-mounting */}
+          <EdgeDetectionOverlay />
 
+          {/* Placeholder when no video is loaded */}
           {showPlaceholder && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-40 p-6 text-center">
               <h3 className="text-xl font-semibold text-muted-foreground mb-2">
@@ -86,7 +137,7 @@ export default function VideoPlayer({ onOpenControls }: VideoPlayerProps) {
             </div>
           )}
 
-          {/* Show controls when video is either playing OR paused but loaded */}
+          {/* Video controls */}
           {hasLoadedVideo && (
             <VideoControls
               isEdgeDetectionEnabled={isEdgeDetectionEnabled}
